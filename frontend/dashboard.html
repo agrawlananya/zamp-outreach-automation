@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zamp AI SDR — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header__brand">Zamp AI SDR</div>
+    <nav class="app-header__nav">
+      <a href="index.html">New Prospect</a>
+      <a href="dashboard.html" class="active">Dashboard</a>
+    </nav>
+  </header>
+  <main class="content">
+    <h1>Dashboard</h1>
+
+    <div class="metric-cards">
+      <div class="metric-card">
+        <div class="metric-card__label">Acceptance Rate</div>
+        <div class="metric-card__value" id="metric-acceptance">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card__label">Groundedness %</div>
+        <div class="metric-card__value" id="metric-groundedness">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card__label">Escalation Rate</div>
+        <div class="metric-card__value" id="metric-escalation">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card__label">Avg. Time-to-Draft</div>
+        <div class="metric-card__value" id="metric-time">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card__label">Avg. Personalization Depth</div>
+        <div class="metric-card__value" id="metric-depth">—</div>
+      </div>
+    </div>
+
+    <div class="table-toolbar">
+      <label for="status-filter">Status</label>
+      <select id="status-filter">
+        <option value="">All</option>
+        <option value="ready_for_review">Ready</option>
+        <option value="insufficient_signal">Insufficient</option>
+        <option value="failed">Failed</option>
+        <option value="reviewed">Reviewed</option>
+      </select>
+    </div>
+
+    <table class="runs-table" id="runs-table">
+      <thead>
+        <tr>
+          <th data-sort="prospect_name">Prospect</th>
+          <th data-sort="company">Company</th>
+          <th data-sort="status">Status</th>
+          <th data-sort="top_hook_score">Hook Score</th>
+          <th data-sort="time_to_draft_ms">Time-to-Draft</th>
+          <th data-sort="human_decision">Decision</th>
+          <th data-sort="created_at">Date</th>
+        </tr>
+      </thead>
+      <tbody id="runs-table-body"></tbody>
+    </table>
+  </main>
+  <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>
