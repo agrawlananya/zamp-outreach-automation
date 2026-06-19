@@ -6,12 +6,23 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.models.db_models import AuditLog, Draft, PainMapping, PersonaMapping, Prospect, ReviewAction, Run, Signal
+from app.models.db_models import (
+    AuditLog,
+    Draft,
+    PainMapping,
+    PersonaMapping,
+    Prospect,
+    ReviewAction,
+    RoleConfirmation,
+    Run,
+    Signal,
+)
 from app.models.schemas import (
     AuditLogOut,
     DraftOut,
     PainMappingOut,
     PersonaMappingOut,
+    RoleConfirmationOut,
     RunDetailResponse,
     RunStatusResponse,
     SignalOut,
@@ -45,6 +56,7 @@ def get_run_detail(run_id: str, db: Session = Depends(get_db)):
     signals = db.query(Signal).filter(Signal.run_id == run_id).all()
     persona_mapping = db.query(PersonaMapping).filter(PersonaMapping.run_id == run_id).first()
     pain_mappings = db.query(PainMapping).filter(PainMapping.run_id == run_id).all()
+    role_confirmation = db.query(RoleConfirmation).filter(RoleConfirmation.run_id == run_id).first()
     latest_draft = db.query(Draft).filter(Draft.run_id == run_id).order_by(Draft.version.desc()).first()
     audit_log = db.query(AuditLog).filter(AuditLog.run_id == run_id).order_by(AuditLog.created_at).all()
 
@@ -57,9 +69,12 @@ def get_run_detail(run_id: str, db: Session = Depends(get_db)):
         completed_at=run.completed_at,
         time_to_draft_ms=run.time_to_draft_ms,
         escalation_reason=run.escalation_reason,
+        fixture_id=run.fixture_id,
+        is_fixture=bool(run.fixture_id),
         signals=[SignalOut.model_validate(s) for s in signals],
         persona_mapping=PersonaMappingOut.model_validate(persona_mapping) if persona_mapping else None,
         pain_mappings=[PainMappingOut.model_validate(pm) for pm in pain_mappings],
+        role_confirmation=RoleConfirmationOut.model_validate(role_confirmation) if role_confirmation else None,
         draft=DraftOut.model_validate(latest_draft) if latest_draft else None,
         audit_log=[AuditLogOut.model_validate(a) for a in audit_log],
     )
@@ -132,7 +147,13 @@ def retry_run(run_id: str, background_tasks: BackgroundTasks, db: Session = Depe
     if run.status != "failed":
         raise HTTPException(status_code=400, detail="Only failed runs can be retried")
 
-    new_run = Run(id=str(uuid.uuid4()), prospect_id=run.prospect_id, status="pending", started_at=datetime.utcnow())
+    new_run = Run(
+        id=str(uuid.uuid4()),
+        prospect_id=run.prospect_id,
+        status="pending",
+        started_at=datetime.utcnow(),
+        fixture_id=run.fixture_id,
+    )
     db.add(new_run)
     db.commit()
 

@@ -1,10 +1,15 @@
 import re
+from dataclasses import dataclass
 
+from app.llm.client import call_llm
+from app.llm.parsing import parse_json_response
+from app.llm.prompts.role_confirmation import build_role_confirmation_prompt
 from app.models.schemas import CorpusItem, RawCorpus
 from app.services import scrape_service, search_service
 from app.services.concurrency import run_concurrently
 
 MAX_URLS_TO_SCRAPE = 12
+MAX_ROLE_CONFIRMATION_TEXT_LENGTH = 6000
 
 ROLE_CHANGE_PATTERN = re.compile(
     # Trigger phrase is case-insensitive; the captured company name must be Capitalized,
@@ -102,3 +107,39 @@ def research_prospect(name: str, company_name: str) -> tuple[RawCorpus, RawCorpu
     )
 
     return company_corpus, individual_corpus
+
+
+NEW_IN_ROLE_THRESHOLD_DAYS = 90
+
+
+@dataclass
+class RoleConfirmationResult:
+    confirmed_title: str | None
+    tenure_days: int | None
+    left_company: bool
+    title_confirmed: bool
+
+
+def confirm_role(individual_corpus: RawCorpus, name: str, company_name: str, input_title: str) -> RoleConfirmationResult:
+    """Edge case: STALE SEAT. The submitted title is an unverified hypothesis — check it
+    against the individual-scoped research already gathered (no new search/scrape calls)."""
+    individual_text = "\n\n".join(item.body_text for item in individual_corpus.items if item.body_text)
+    individual_text = individual_text[:MAX_ROLE_CONFIRMATION_TEXT_LENGTH]
+
+    if not individual_text:
+        return RoleConfirmationResult(confirmed_title=None, tenure_days=None, left_company=False, title_confirmed=False)
+
+    system_prompt, user_prompt = build_role_confirmation_prompt(individual_text, name, company_name, input_title)
+    try:
+        response = call_llm(system_prompt, user_prompt)
+        parsed = parse_json_response(response)
+    except Exception:
+        # Can't confirm — caller treats this the same as "role cannot be confirmed either way".
+        return RoleConfirmationResult(confirmed_title=None, tenure_days=None, left_company=False, title_confirmed=False)
+
+    return RoleConfirmationResult(
+        confirmed_title=parsed.get("confirmed_title"),
+        tenure_days=parsed.get("tenure_days"),
+        left_company=bool(parsed.get("left_company", False)),
+        title_confirmed=bool(parsed.get("title_confirmed", False)),
+    )

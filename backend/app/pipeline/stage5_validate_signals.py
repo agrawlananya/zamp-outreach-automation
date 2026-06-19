@@ -6,18 +6,23 @@ from app.llm.prompts.verifier import build_verifier_prompt
 from app.models.db_models import Signal
 from app.services.concurrency import run_concurrently
 
+VALID_VALENCES = {"positive", "neutral", "soft_negative", "sensitive"}
 
-def _verify(claim_and_snippet: tuple[str, str]) -> tuple[str, str]:
+
+def _verify(claim_and_snippet: tuple[str, str]) -> tuple[str, str, str]:
     claim, source_snippet = claim_and_snippet
     system_prompt, user_prompt = build_verifier_prompt(claim, source_snippet)
     try:
         response = call_llm(system_prompt, user_prompt)
         result = parse_json_response(response)
-        return result.get("verdict"), result.get("reason")
+        valence = result.get("valence")
+        if valence not in VALID_VALENCES:
+            valence = "neutral"
+        return result.get("verdict"), result.get("reason"), valence
     except Exception as e:
         # One malformed/failed response shouldn't discard every other signal's validation.
         # Fail closed: an unverifiable signal is treated as not validated, not silently dropped.
-        return "invalid", f"Verification call failed: {e}"
+        return "invalid", f"Verification call failed: {e}", "neutral"
 
 
 def validate_signals(signals: list[Signal], run_id: str, db: Session) -> list[Signal]:
@@ -28,9 +33,10 @@ def validate_signals(signals: list[Signal], run_id: str, db: Session) -> list[Si
     claims_and_snippets = [(s.claim, s.source_snippet) for s in signals]
     verdicts = run_concurrently(_verify, claims_and_snippets, max_workers=4)
 
-    for signal, (verdict, reason) in zip(signals, verdicts):
+    for signal, (verdict, reason, valence) in zip(signals, verdicts):
         signal.validated = verdict == "valid"
         signal.validation_reason = reason
+        signal.valence = valence
 
         if signal.validated:
             validated_signals.append(signal)

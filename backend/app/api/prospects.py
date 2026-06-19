@@ -8,8 +8,14 @@ from app.db.database import get_db
 from app.models.db_models import Prospect, Run
 from app.models.schemas import ProspectCreate
 from app.pipeline.orchestrator import run_pipeline_in_background
+from app.services import fixtures
 
 router = APIRouter()
+
+
+@router.get("/api/fixtures")
+def list_fixtures():
+    return {"fixture_ids": fixtures.list_fixture_ids()}
 
 
 @router.post("/api/prospects")
@@ -24,7 +30,13 @@ def create_prospect(payload: ProspectCreate, background_tasks: BackgroundTasks, 
     db.add(prospect)
     db.commit()
 
-    run = Run(id=str(uuid.uuid4()), prospect_id=prospect.id, status="pending", started_at=datetime.utcnow())
+    run = Run(
+        id=str(uuid.uuid4()),
+        prospect_id=prospect.id,
+        status="pending",
+        started_at=datetime.utcnow(),
+        fixture_id=payload.fixture_id,
+    )
     db.add(run)
     db.commit()
 

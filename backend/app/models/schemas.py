@@ -8,6 +8,7 @@ class ProspectCreate(BaseModel):
     name: str
     title: str
     company_name: str
+    fixture_id: Optional[str] = None
 
 
 class RunStatusResponse(BaseModel):
@@ -59,6 +60,24 @@ class SignalOut(BaseModel):
     verifiability_score: Optional[float] = None
     hook_score: Optional[float] = None
     selected_as_hook: Optional[bool] = None
+    valence: Optional[str] = None
+    saturation: Optional[float] = None
+    adjusted_hook_score: Optional[float] = None
+    claim_type: Optional[str] = None
+
+
+class RoleConfirmationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    run_id: str
+    input_title: Optional[str] = None
+    confirmed_title: Optional[str] = None
+    tenure_days: Optional[int] = None
+    title_corrected: Optional[bool] = None
+    title_assumed: Optional[bool] = None
+    new_in_role: Optional[bool] = None
+    left_company: Optional[bool] = None
 
 
 class PersonaMappingOut(BaseModel):
@@ -96,6 +115,8 @@ class DraftOut(BaseModel):
     sources_used: Optional[str] = None
     rubric_scores: Optional[str] = None
     groundedness_pass: Optional[bool] = None
+    derived_consequence: Optional[str] = None
+    body_sentences: Optional[str] = None
     created_at: Optional[datetime] = None
 
 
@@ -125,9 +146,12 @@ class RunDetailResponse(BaseModel):
     completed_at: Optional[datetime] = None
     time_to_draft_ms: Optional[int] = None
     escalation_reason: Optional[str] = None
+    fixture_id: Optional[str] = None
+    is_fixture: bool = False
     signals: list[SignalOut] = []
     persona_mapping: Optional[PersonaMappingOut] = None
     pain_mappings: list[PainMappingOut] = []
+    role_confirmation: Optional[RoleConfirmationOut] = None
     draft: Optional[DraftOut] = None
     audit_log: list[AuditLogOut] = []
 

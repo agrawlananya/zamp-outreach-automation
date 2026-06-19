@@ -356,6 +356,73 @@ blockquote {
   background: #ecfdf5;
 }
 
+.scores-table tr.row--suppressed {
+  opacity: 0.55;
+}
+
+/* valence + saturation (edge cases 2 & 3) */
+.tag--positive {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.tag--neutral {
+  background: var(--grey-bg);
+  color: var(--grey);
+}
+
+.tag--soft_negative {
+  background: var(--yellow-bg);
+  color: var(--yellow);
+}
+
+.tag--sensitive {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.score-adjusted {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+/* fact / inference annotated draft preview (edge case 4) */
+.annotated-body {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.annotated-body p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+
+.sentence--fact {
+  border-bottom: 1px solid var(--blue);
+}
+
+.sentence--inference {
+  border-bottom: 1px dotted var(--muted);
+  cursor: help;
+}
+
+/* fixture mode */
+.badge--fixture {
+  background: var(--blue-bg);
+  color: var(--blue);
+  margin-left: 10px;
+}
+
+.derived-consequence {
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.raw-claim-context {
+  margin: 0 0 4px;
+}
+
 .sources-list {
   list-style: none;
   padding: 0;

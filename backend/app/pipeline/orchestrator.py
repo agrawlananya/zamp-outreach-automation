@@ -6,7 +6,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.db.database import SessionLocal
-from app.models.db_models import AuditLog, Draft, PainMapping, PersonaMapping, Run, Signal
+from app.models.db_models import AuditLog, Draft, PainMapping, PersonaMapping, RoleConfirmation, Run, Signal
 from app.models.schemas import NormalizedProspect, RawCorpus
 from app.pipeline import (
     stage1_intake,
@@ -22,6 +22,7 @@ from app.pipeline import (
 )
 from app.pipeline.stage8_hook_scoring import HookSelection
 from app.pipeline.stage10_quality_scoring import RubricScore
+from app.services import fixtures
 
 
 def _signal_snapshot(signal: Signal) -> dict:
@@ -29,14 +30,26 @@ def _signal_snapshot(signal: Signal) -> dict:
         "id": signal.id,
         "type": signal.type,
         "claim": signal.claim,
+        "claim_type": signal.claim_type,
+        "valence": signal.valence,
         "validated": signal.validated,
         "hook_score": signal.hook_score,
+        "adjusted_hook_score": signal.adjusted_hook_score,
         "selected_as_hook": signal.selected_as_hook,
     }
 
 
 def _persona_snapshot(persona: PersonaMapping) -> dict:
     return {"persona_name": persona.persona_name, "is_assumed": persona.is_assumed}
+
+
+def _role_confirmation_snapshot(role: stage2_research.RoleConfirmationResult) -> dict:
+    return {
+        "confirmed_title": role.confirmed_title,
+        "tenure_days": role.tenure_days,
+        "left_company": role.left_company,
+        "title_confirmed": role.title_confirmed,
+    }
 
 
 def _pain_mapping_snapshot(pain_mapping: PainMapping) -> dict:
@@ -76,11 +89,18 @@ class PipelineOrchestrator:
             self._fail_run(db, run, start_time)
             return
 
-        # Stage 2 — unified company + individual research (continuable: degrades to two empty corpora)
+        # Stage 2 — unified company + individual research (continuable: degrades to two empty corpora).
+        # FIXTURE MODE: pins the research input by replaying a stored payload instead of live
+        # Tavily/scrape calls. Every stage downstream of this still runs live against that input.
+        if run.fixture_id:
+            research_fn = lambda: fixtures.load_fixture(run.fixture_id)
+        else:
+            research_fn = lambda: stage2_research.research_prospect(normalized.name, normalized.company_name)
+
         research_result, ok = self._execute_stage(
             db, run, "stage2_research", None,
-            {"name": normalized.name, "company": normalized.company_name},
-            lambda: stage2_research.research_prospect(normalized.name, normalized.company_name),
+            {"name": normalized.name, "company": normalized.company_name, "fixture_id": run.fixture_id},
+            research_fn,
             output_snapshot_fn=lambda r: {
                 "company_items": len(r[0].items),
                 "individual_items": len(r[1].items),
@@ -117,6 +137,48 @@ class PipelineOrchestrator:
             db.commit()
             return
 
+        # Stage 3 — confirm current role (EDGE CASE 1: STALE SEAT). The submitted title is an
+        # unverified hypothesis. Reuses the already-scraped individual corpus — one new LLM
+        # call, no new search/scrape. Must run before persona mapping (stage 6).
+        role_result, ok = self._execute_stage(
+            db, run, "stage3_role_confirmation", "role_confirmation", {"input_title": normalized.title},
+            lambda: stage2_research.confirm_role(
+                individual_corpus, normalized.name, normalized.company_name, normalized.title
+            ),
+            output_snapshot_fn=_role_confirmation_snapshot,
+            continuable=True,
+            fallback=stage2_research.RoleConfirmationResult(
+                confirmed_title=None, tenure_days=None, left_company=False, title_confirmed=False
+            ),
+        )
+
+        if role_result.left_company:
+            run.escalation_reason = "contact may have moved on"
+            run.status = "needs_human_research"
+            run.completed_at = datetime.utcnow()
+            run.time_to_draft_ms = int((time.time() - start_time) * 1000)
+            db.commit()
+            return
+
+        title_corrected = bool(role_result.confirmed_title) and (
+            role_result.confirmed_title.strip().lower() != normalized.title.strip().lower()
+        )
+        new_in_role = role_result.tenure_days is not None and role_result.tenure_days < stage2_research.NEW_IN_ROLE_THRESHOLD_DAYS
+        effective_title = role_result.confirmed_title if title_corrected else normalized.title
+
+        db.add(RoleConfirmation(
+            id=str(uuid.uuid4()),
+            run_id=run_id,
+            input_title=normalized.title,
+            confirmed_title=role_result.confirmed_title,
+            tenure_days=role_result.tenure_days,
+            title_corrected=title_corrected,
+            title_assumed=not role_result.title_confirmed,
+            new_in_role=new_in_role,
+            left_company=False,
+        ))
+        db.commit()
+
         # Stage 4 — extract signals (continuable: degrades to no signals -> naturally routes to insufficient_signal)
         extracted_signals, ok = self._execute_stage(
             db, run, "stage4_extract_signals", "extractor",
@@ -127,19 +189,25 @@ class PipelineOrchestrator:
             fallback=[],
         )
 
+        # EDGE CASE 4: only `fact` signals (verbatim source snippet) go through validation —
+        # `inference` signals (a derived causal/logical bridge, no snippet) can't be snippet-verified.
+        # They stay stored on the run for trail visibility but never compete for the hook.
+        fact_signals = [s for s in extracted_signals if (s.claim_type or "fact") == "fact"]
+
         # Stage 5 — validate signals (continuable)
         validated_signals, ok = self._execute_stage(
-            db, run, "stage5_validate_signals", "verifier", {"signal_count": len(extracted_signals)},
-            lambda: stage5_validate_signals.validate_signals(extracted_signals, run_id, db),
+            db, run, "stage5_validate_signals", "verifier", {"signal_count": len(fact_signals)},
+            lambda: stage5_validate_signals.validate_signals(fact_signals, run_id, db),
             output_snapshot_fn=lambda r: {"validated_count": len(r)},
             continuable=True,
             fallback=[],
         )
 
-        # Stage 6 — persona mapping (not continuable: downstream pain mapping/draft need a persona)
+        # Stage 6 — persona mapping (not continuable: downstream pain mapping/draft need a persona).
+        # Uses the confirmed title (EDGE CASE 1) when one was found and differs from the input.
         persona_mapping, ok = self._execute_stage(
-            db, run, "stage6_persona_mapping", None, {"title": normalized.title},
-            lambda: stage6_persona_mapping.map_persona(normalized.title, run_id, db),
+            db, run, "stage6_persona_mapping", None, {"title": effective_title},
+            lambda: stage6_persona_mapping.map_persona(effective_title, run_id, db),
             output_snapshot_fn=_persona_snapshot,
         )
         if not ok:
@@ -159,7 +227,9 @@ class PipelineOrchestrator:
             fallback=[],
         )
 
-        # Stage 8 — hook scoring (not continuable: deterministic, an exception here is unexpected)
+        # Stage 8 — hook scoring (not continuable: deterministic, an exception here is unexpected).
+        # EDGE CASE 2 (valence gate) and EDGE CASE 3 (saturation penalty) are applied inside
+        # score_and_select_hook itself — no orchestrator-level change to this call.
         # EC-1: if both research corpora came back thin, force low confidence rather than let a
         # single thin signal masquerade as a strong hook.
         force_low_confidence = company_corpus.thin_corpus and individual_corpus.thin_corpus
@@ -175,6 +245,8 @@ class PipelineOrchestrator:
             self._fail_run(db, run, start_time)
             return
 
+        # Covers both the existing low-score gate and EDGE CASE 2's "only sensitive signals
+        # available" case for free: a forced hook_score of 0 already fails this threshold.
         if not hook_selection.top_score_sufficient or hook_selection.selected_signal is None:
             run.status = "insufficient_signal"
             run.completed_at = datetime.utcnow()
@@ -187,7 +259,8 @@ class PipelineOrchestrator:
             db, run, "stage9_draft_generation", "writer",
             {"hook_signal_id": hook_selection.selected_signal.id, "version": 1},
             lambda: stage9_draft_generation.generate_draft(
-                hook_selection.selected_signal, persona_mapping, pain_mappings, normalized.name, run_id, db, version=1
+                hook_selection.selected_signal, persona_mapping, pain_mappings, normalized.name, run_id, db,
+                version=1, new_in_role=new_in_role,
             ),
             output_snapshot_fn=_draft_snapshot,
         )
@@ -211,7 +284,8 @@ class PipelineOrchestrator:
                 db, run, "stage9_draft_generation", "writer",
                 {"hook_signal_id": hook_selection.selected_signal.id, "version": 2, "reason": "groundedness_retry"},
                 lambda: stage9_draft_generation.generate_draft(
-                    hook_selection.selected_signal, persona_mapping, pain_mappings, normalized.name, run_id, db, version=2
+                    hook_selection.selected_signal, persona_mapping, pain_mappings, normalized.name, run_id, db,
+                    version=2, new_in_role=new_in_role,
                 ),
                 output_snapshot_fn=_draft_snapshot,
             )

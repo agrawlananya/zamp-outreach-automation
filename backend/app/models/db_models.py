@@ -36,6 +36,7 @@ class Run(Base):
     completed_at = Column(DateTime)
     time_to_draft_ms = Column(Integer)
     escalation_reason = Column(Text)
+    fixture_id = Column(String)
 
 
 class Signal(Base):
@@ -59,6 +60,10 @@ class Signal(Base):
     verifiability_score = Column(Float)
     hook_score = Column(Float)
     selected_as_hook = Column(Boolean)
+    valence = Column(String)  # positive | neutral | soft_negative | sensitive
+    saturation = Column(Float)
+    adjusted_hook_score = Column(Float)
+    claim_type = Column(String)  # fact | inference
 
 
 class PersonaMapping(Base):
@@ -96,7 +101,23 @@ class Draft(Base):
     sources_used = Column(Text)  # JSON array of signal ids
     rubric_scores = Column(Text)  # JSON
     groundedness_pass = Column(Boolean)
+    derived_consequence = Column(Text)
+    body_sentences = Column(Text)  # JSON: [{text, type, signal_id}]
     created_at = Column(DateTime)
+
+
+class RoleConfirmation(Base):
+    __tablename__ = "role_confirmations"
+
+    id = Column(String, primary_key=True)
+    run_id = Column(String, ForeignKey("runs.id"), nullable=False)
+    input_title = Column(String)
+    confirmed_title = Column(String)
+    tenure_days = Column(Integer)
+    title_corrected = Column(Boolean)
+    title_assumed = Column(Boolean)
+    new_in_role = Column(Boolean)
+    left_company = Column(Boolean)
 
 
 class ReviewAction(Base):

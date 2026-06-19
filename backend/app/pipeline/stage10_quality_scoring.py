@@ -20,8 +20,9 @@ def score_draft(draft: Draft, validated_signals: list[Signal], run_id: str, db: 
         {"claim": s.claim, "source_snippet": s.source_snippet, "source_url": s.source_url}
         for s in validated_signals
     ]
+    body_sentences = json.loads(draft.body_sentences) if draft.body_sentences else []
 
-    system_prompt, user_prompt = build_critic_prompt(draft.subject, draft.body, validated_signal_dicts)
+    system_prompt, user_prompt = build_critic_prompt(draft.subject, draft.body, validated_signal_dicts, body_sentences)
     response = call_llm(system_prompt, user_prompt)
     parsed = parse_json_response(response)
 

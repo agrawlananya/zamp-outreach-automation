@@ -18,6 +18,18 @@ ACTIONABLE_TYPES = {
     "system_migration",
 }
 
+# EDGE CASE 3 (saturation penalty): categories that are "template-bait" — widely syndicated,
+# easy for any competitor to find and use the same way.
+TEMPLATE_BAIT_TYPES = {
+    "funding_round",
+    "executive_hire",
+    "award",
+    "product_launch",
+    "partnership",
+    "acquisition",
+    "ipo_prep",
+}
+
 
 @dataclass
 class HookSubScores:
@@ -32,6 +44,7 @@ class HookSubScores:
 class HookCandidate:
     signal_id: str
     hook_score: float
+    adjusted_hook_score: float
     sub_scores: HookSubScores
 
 
@@ -82,6 +95,30 @@ def _score_verifiability(signal: Signal) -> float:
     return 1.0 if signal.source_snippet and len(signal.source_snippet) > 50 else 0.5
 
 
+def _score_saturation(signal: Signal, all_signals: list[Signal]) -> float:
+    """EDGE CASE 3: heuristic 0-1 estimate of how widely covered/obvious a signal is, computed
+    entirely from data already fetched for this run (no new search calls). Inputs: whether the
+    type is a "template-bait" category, how many OTHER distinct sources in this same run cover
+    the same entity+type (a cheap proxy for syndication), and how stale the news cycle is."""
+    is_template_bait = (signal.type or "") in TEMPLATE_BAIT_TYPES
+
+    distinct_sources = {
+        other.source_url
+        for other in all_signals
+        if signal.entity and other.entity == signal.entity and other.type == signal.type and other.source_url
+    }
+    duplicate_count = max(len(distinct_sources) - 1, 0)
+
+    recency = _score_recency(signal)
+
+    saturation = (
+        0.4 * (1.0 if is_template_bait else 0.0)
+        + 0.4 * min(duplicate_count / 3, 1.0)
+        + 0.2 * (1.0 - recency)
+    )
+    return min(1.0, max(0.0, saturation))
+
+
 def rank_candidate_signals(signals: list[Signal], limit: int = 8) -> list[Signal]:
     """Cheaply pre-rank validated signals on the four sub-scores that don't require
     pain-mapping (relevance is excluded — it can only be computed after pain-mapping
@@ -109,7 +146,7 @@ def score_and_select_hook(
 
     candidates: list[HookCandidate] = []
     best_signal: Signal | None = None
-    best_score = -1.0
+    best_adjusted_score = -1.0
 
     for signal in signals:
         sub_scores = HookSubScores(
@@ -139,18 +176,37 @@ def score_and_select_hook(
             sub_scores.verifiability,
         )
 
+        # EDGE CASE 2 (valence gate): sensitive signals are factually still true (sub-scores
+        # are left as computed, for trail transparency) but are never eligible as an outreach hook.
+        if signal.valence == "sensitive":
+            hook_score = 0.0
+
+        saturation = _score_saturation(signal, signals)
+        # EDGE CASE 3 (saturation penalty): the signal stays true; only its outreach value is
+        # discounted. The raw hook_score is kept as-is for the trail, selection uses adjusted.
+        adjusted_hook_score = hook_score * (1 - 0.5 * saturation)
+
         signal.relevance_score = sub_scores.relevance
         signal.specificity_score = sub_scores.specificity
         signal.recency_score = sub_scores.recency
         signal.actionability_score = sub_scores.actionability
         signal.verifiability_score = sub_scores.verifiability
         signal.hook_score = hook_score
+        signal.saturation = saturation
+        signal.adjusted_hook_score = adjusted_hook_score
         signal.selected_as_hook = False
 
-        candidates.append(HookCandidate(signal_id=signal.id, hook_score=hook_score, sub_scores=sub_scores))
+        candidates.append(
+            HookCandidate(
+                signal_id=signal.id,
+                hook_score=hook_score,
+                adjusted_hook_score=adjusted_hook_score,
+                sub_scores=sub_scores,
+            )
+        )
 
-        if hook_score > best_score:
-            best_score = hook_score
+        if adjusted_hook_score > best_adjusted_score:
+            best_adjusted_score = adjusted_hook_score
             best_signal = signal
 
     if best_signal is not None:
@@ -161,5 +217,5 @@ def score_and_select_hook(
     return HookSelection(
         selected_signal=best_signal,
         all_scores=candidates,
-        top_score_sufficient=score_is_sufficient(best_score) if best_signal is not None else False,
+        top_score_sufficient=score_is_sufficient(best_adjusted_score) if best_signal is not None else False,
     )

@@ -42,12 +42,14 @@ def extract_signals(corpora: list[RawCorpus], run_id: str, db: Session) -> list[
 
     for item, extracted in zip(items_with_text, extracted_per_item):
         for entry in extracted:
+            claim_type = entry.get("claim_type") if entry.get("claim_type") in ("fact", "inference") else "fact"
             signal = Signal(
                 id=str(uuid.uuid4()),
                 run_id=run_id,
                 scope=entry.get("scope"),
                 type=entry.get("type"),
                 claim=entry.get("claim"),
+                claim_type=claim_type,
                 source_url=item.url,
                 source_snippet=entry.get("source_snippet"),
                 signal_date=_parse_signal_date(entry.get("signal_date")),

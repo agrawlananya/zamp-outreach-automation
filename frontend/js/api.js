@@ -14,6 +14,11 @@ async function handleResponse(response) {
   return response.json();
 }
 
+export async function getFixtures() {
+  const response = await fetch(`${API_BASE_URL}/api/fixtures`);
+  return handleResponse(response);
+}
+
 export async function createProspect(data) {
   const response = await fetch(`${API_BASE_URL}/api/prospects`, {
     method: "POST",

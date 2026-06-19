@@ -68,6 +68,29 @@ function formatScore(value) {
   return value === null || value === undefined ? "—" : Number(value).toFixed(2);
 }
 
+function valenceTag(valence) {
+  if (!valence) return "";
+  return `<span class="tag tag--${escapeHtml(valence)}">${escapeHtml(valence)}</span>`;
+}
+
+function hookScoreCell(s) {
+  const raw = formatScore(s.hook_score);
+  const hasAdjustment =
+    s.adjusted_hook_score !== null && s.adjusted_hook_score !== undefined && s.adjusted_hook_score !== s.hook_score;
+  if (!hasAdjustment) {
+    return raw;
+  }
+  const pct = s.hook_score ? Math.round((1 - s.adjusted_hook_score / s.hook_score) * 100) : 0;
+  return `${raw} &rarr; ${formatScore(s.adjusted_hook_score)}${pct > 0 ? `<div class="score-adjusted">saturation -${pct}%</div>` : ""}`;
+}
+
+function signalStatusCell(s) {
+  if (s.valence === "sensitive") {
+    return "suppressed: sensitive";
+  }
+  return s.selected_as_hook ? "Selected" : "Considered — not selected";
+}
+
 function renderStageList(currentStage, runStatus, degradedStages) {
   const currentIndex = STAGE_ORDER.indexOf(currentStage);
 
@@ -167,10 +190,16 @@ function renderReasoningTrail(detail) {
 
   if (hookSignal) {
     const pain = painBySignalId.get(hookSignal.id);
+    const derivedConsequence = detail.draft && detail.draft.derived_consequence;
     html += `<div class="trail-block">
       <h3>Chosen Hook</h3>
-      <p class="claim">${escapeHtml(hookSignal.claim)}</p>
-      <p class="muted">Hook score: <strong>${formatScore(hookSignal.hook_score)}</strong> · Type: ${escapeHtml(hookSignal.type)}</p>
+      ${
+        derivedConsequence
+          ? `<p class="derived-consequence">${escapeHtml(derivedConsequence)}</p>
+             <p class="muted raw-claim-context">from: ${escapeHtml(hookSignal.claim)} — used as context, not the hook.</p>`
+          : `<p class="claim">${escapeHtml(hookSignal.claim)}</p>`
+      }
+      <p class="muted">Hook score: <strong>${hookScoreCell(hookSignal)}</strong> · Type: ${escapeHtml(hookSignal.type)} ${valenceTag(hookSignal.valence)}</p>
       ${pain ? `<p class="muted">Matched pain: <strong>${escapeHtml(pain.owned_pain)}</strong>${pain.owned_kpi ? ` (KPI: ${escapeHtml(pain.owned_kpi)})` : ""}</p>` : ""}
       ${hookSignal.source_url ? `<p class="source"><a href="${escapeHtml(hookSignal.source_url)}" target="_blank" rel="noopener">${escapeHtml(hookSignal.source_url)}</a></p>` : ""}
       ${hookSignal.source_snippet ? `<blockquote>${escapeHtml(hookSignal.source_snippet)}</blockquote>` : ""}
@@ -183,20 +212,21 @@ function renderReasoningTrail(detail) {
     <h3>All Candidate Signals</h3>
     <table class="scores-table">
       <thead>
-        <tr><th>Claim</th><th>Status</th><th>Rel.</th><th>Spec.</th><th>Rec.</th><th>Act.</th><th>Ver.</th><th>Hook</th></tr>
+        <tr><th>Claim</th><th>Status</th><th>Valence</th><th>Rel.</th><th>Spec.</th><th>Rec.</th><th>Act.</th><th>Ver.</th><th>Hook</th></tr>
       </thead>
       <tbody>
         ${detail.signals
           .map(
-            (s) => `<tr class="${s.selected_as_hook ? "row--selected" : ""}">
+            (s) => `<tr class="${s.selected_as_hook ? "row--selected" : s.valence === "sensitive" ? "row--suppressed" : ""}">
           <td>${escapeHtml(s.claim)}</td>
-          <td>${s.selected_as_hook ? "Selected" : "Considered — not selected"}</td>
+          <td>${signalStatusCell(s)}</td>
+          <td>${valenceTag(s.valence)}</td>
           <td>${formatScore(s.relevance_score)}</td>
           <td>${formatScore(s.specificity_score)}</td>
           <td>${formatScore(s.recency_score)}</td>
           <td>${formatScore(s.actionability_score)}</td>
           <td>${formatScore(s.verifiability_score)}</td>
-          <td>${formatScore(s.hook_score)}</td>
+          <td>${hookScoreCell(s)}</td>
         </tr>`
           )
           .join("")}
@@ -219,6 +249,78 @@ function renderReasoningTrail(detail) {
   </div>`;
 
   container.innerHTML = html;
+}
+
+function renderAnnotatedBody(detail) {
+  const container = document.getElementById("annotated-body");
+  if (!container) return;
+
+  let bodySentences = [];
+  try {
+    bodySentences = detail.draft && detail.draft.body_sentences ? JSON.parse(detail.draft.body_sentences) : [];
+  } catch (error) {
+    bodySentences = [];
+  }
+
+  if (!bodySentences.length) {
+    container.hidden = true;
+    container.innerHTML = "";
+    return;
+  }
+
+  const byParagraph = new Map();
+  bodySentences.forEach((s) => {
+    if (!byParagraph.has(s.paragraph)) byParagraph.set(s.paragraph, []);
+    byParagraph.get(s.paragraph).push(s);
+  });
+
+  const paragraphsHtml = [...byParagraph.keys()]
+    .sort((a, b) => a - b)
+    .map((p) => {
+      const sentences = byParagraph
+        .get(p)
+        .map((s) => {
+          const isInference = s.type === "inference";
+          const cls = isInference ? "sentence--inference" : "sentence--fact";
+          const title = isInference ? "inference — not directly sourced" : "fact — sourced from the selected hook signal";
+          return `<span class="${cls}" title="${escapeHtml(title)}">${escapeHtml(s.text)}</span>`;
+        })
+        .join(" ");
+      return `<p>${sentences}</p>`;
+    })
+    .join("");
+
+  container.hidden = false;
+  container.innerHTML = `<h3>Fact / Inference Preview</h3>${paragraphsHtml}`;
+}
+
+function renderRoleConfirmationNote(detail) {
+  const note = document.getElementById("role-confirmation-note");
+  if (!note) return;
+
+  const rc = detail.role_confirmation;
+  if (!rc || (!rc.title_corrected && !rc.new_in_role)) {
+    note.hidden = true;
+    note.textContent = "";
+    return;
+  }
+
+  const parts = [];
+  if (rc.title_corrected) {
+    parts.push(`Title corrected from "${rc.input_title}" to "${rc.confirmed_title}".`);
+  }
+  if (rc.new_in_role) {
+    parts.push(`New in role (~${rc.tenure_days} days) — hooked on new mandate, not past performance.`);
+  }
+
+  note.hidden = false;
+  note.textContent = parts.join(" ");
+}
+
+function renderFixtureBadge(detail) {
+  const badge = document.getElementById("fixture-badge");
+  if (!badge) return;
+  badge.hidden = !detail.is_fixture;
 }
 
 function wireActions(detail) {
@@ -260,9 +362,14 @@ function wireActions(detail) {
 
   approveBtn.addEventListener("click", () => recordDecision({ action: "approve" }));
 
-  approveEditsBtn.addEventListener("click", () =>
-    recordDecision({ action: "approve_with_edits", edited_body: bodyTextarea.value })
-  );
+  approveEditsBtn.addEventListener("click", () => {
+    if (approveEditsBtn.textContent !== "Confirm Edits") {
+      approveEditsBtn.textContent = "Confirm Edits";
+      bodyTextarea.focus();
+      return;
+    }
+    recordDecision({ action: "approve_with_edits", edited_body: bodyTextarea.value });
+  });
 
   rejectBtn.addEventListener("click", () => {
     if (rejectBox.hidden) {
@@ -280,8 +387,11 @@ function showReviewPhase(detail) {
   reviewPhase.hidden = false;
 
   renderStatusBanner(detail);
+  renderRoleConfirmationNote(detail);
   renderDraftPanel(detail);
+  renderAnnotatedBody(detail);
   renderReasoningTrail(detail);
+  renderFixtureBadge(detail);
   wireActions(detail);
 }
 
@@ -289,6 +399,8 @@ async function pollStatus() {
   try {
     const status = await getRunStatus(runId);
     const detail = await getRunDetail(runId);
+
+    renderFixtureBadge(detail);
 
     const degradedStages = new Set(
       (detail.audit_log || [])
