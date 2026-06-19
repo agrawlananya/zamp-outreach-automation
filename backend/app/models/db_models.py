@@ -91,6 +91,7 @@ class Draft(Base):
     run_id = Column(String, ForeignKey("runs.id"), nullable=False)
     version = Column(Integer)
     subject = Column(String)
+    subject_alt = Column(String)
     body = Column(Text)
     sources_used = Column(Text)  # JSON array of signal ids
     rubric_scores = Column(Text)  # JSON

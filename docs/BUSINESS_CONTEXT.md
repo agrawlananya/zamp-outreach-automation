@@ -8,7 +8,7 @@ An internal AI SDR tool for Zamp's sales team. Given a prospect's name, title, a
 ---
 
 ## Why This Matters
-Good first-touch outbound requires 15–25 minutes of research per prospect. At scale that's impossible, so reps either send generic templates or use AI tools that invent specificity. Both get caught by finance buyers and burn credibility — especially damaging when Zamp's own product pitch is "trustworthy AI for finance."
+Good first-touch outbound requires 15–25 minutes of research per prospect. At scale that's impossible, so reps either send generic templates or use AI tools that invent specificity. Both get caught by buyers and burn credibility — especially damaging when Zamp's own product pitch is trustworthy, autonomous AI execution. Zamp is an AI employee platform, not a finance-only tool: finance and accounting are the flagship wedge, but the same model — brief it once, it runs the job end-to-end, escalating only true exceptions — extends to legal, sales, marketing, product, procurement, compliance, RevOps, support, recruiting, and data ops.
 
 The system solves this by grounding every claim in a real, dated, verifiable source — and by being honest when it can't find a good reason to reach out, rather than fabricating one.
 
@@ -21,18 +21,28 @@ A Zamp SDR, AE, or RevOps operator preparing first-touch outreach. Non-technical
 
 ---
 
-## Prospect Personas (Finance Buyers)
-These are the types of people the emails are written *to*. The system maps each prospect title to one of these personas to pick the right pain to address.
+## Prospect Personas
+These are the types of people the emails are written *to*. The system maps each prospect title to one of these personas to pick the right pain to address. Personas span both **economic buyers** (budget authority — CFO, CEO, CRO, General Counsel, etc.), **functional buyers** (own the workflow — VP Finance, Head of Legal Ops, VP Marketing, etc.), and **managers** (day-to-day operators and champions — Controller, AP Manager, Recruiting Manager, etc.).
 
-| Persona | Primary Pain | Key KPIs |
-|---|---|---|
-| CFO | Financial control, audit risk, board-level reporting | Cash visibility, close cycle, cost per transaction |
-| Controller | Month-end close speed, reconciliation errors, audit prep | Days to close, error rate, manual hours |
-| VP Finance | Scaling finance ops without headcount | Cost of finance as % of revenue |
-| Head of Accounting | Team capacity, error-prone manual processes | Headcount per $1M revenue, error rate |
-| Finance / AP Ops Lead | Vendor payments, approval bottlenecks, duplicate payments | AP cycle time, exception rate |
+Personas now cover every function Zamp's AI-employee model applies to, not just finance:
 
-Unknown titles fall back to the nearest persona. The system records this assumption explicitly.
+- Executive / Founder / Board
+- Finance & Accounting (flagship wedge)
+- Procurement
+- Compliance & Risk
+- Legal
+- Marketing
+- Sales
+- IT & Technology
+- Cybersecurity
+- Product & Engineering
+- RevOps & GTM
+- Customer Success & Support
+- Recruiting & People Ops
+- Data Operations
+- Operations (cross-functional)
+
+The full persona library — title aliases, goals, pains, KPIs, and messaging angle per persona — lives in `backend/app/services/persona_library.py`. Unknown titles fall back to the nearest persona via an LLM match. The system records this assumption explicitly (`is_assumed`).
 
 ---
 

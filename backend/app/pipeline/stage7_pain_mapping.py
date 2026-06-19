@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.llm.client import call_llm
 from app.llm.parsing import parse_json_response
 from app.models.db_models import PainMapping, PersonaMapping, Signal
+from app.services.concurrency import run_concurrently
 
 
 def _build_pain_prompt(claim: str, pains: list[str]) -> tuple[str, str]:
@@ -23,13 +24,22 @@ def map_pain(signals: list[Signal], persona: PersonaMapping, run_id: str, db: Se
     pains = json.loads(persona.pains)
     pain_mappings: list[PainMapping] = []
 
-    for signal in signals:
-        system_prompt, user_prompt = _build_pain_prompt(signal.claim, pains)
+    def map_one(claim: str) -> dict | None:
+        system_prompt, user_prompt = _build_pain_prompt(claim, pains)
         try:
             response = call_llm(system_prompt, user_prompt)
-            result = parse_json_response(response)
+            return parse_json_response(response)
         except Exception:
             # One malformed/failed pain-mapping call shouldn't discard every other signal's mapping.
+            return None
+
+    # Read signal.claim on the main thread first — see stage5_validate_signals.py for why
+    # SQLAlchemy-mapped attributes can't be touched from worker threads.
+    claims = [s.claim for s in signals]
+    results = run_concurrently(map_one, claims, max_workers=4)
+
+    for signal, result in zip(signals, results):
+        if result is None:
             continue
 
         pain_mapping = PainMapping(

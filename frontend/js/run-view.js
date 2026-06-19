@@ -2,8 +2,7 @@ import { getRunStatus, getRunDetail, retryRun, submitReview } from "./api.js";
 
 const STAGE_ORDER = [
   "stage1_intake",
-  "stage2_company_research",
-  "stage3_individual_research",
+  "stage2_research",
   "stage4_extract_signals",
   "stage5_validate_signals",
   "stage6_persona_mapping",
@@ -16,8 +15,7 @@ const STAGE_ORDER = [
 
 const STAGE_LABELS = {
   stage1_intake: "Intake & Normalize",
-  stage2_company_research: "Company Research",
-  stage3_individual_research: "Individual Research",
+  stage2_research: "Research Company & Individual",
   stage4_extract_signals: "Extract Signals",
   stage5_validate_signals: "Validate Signals",
   stage6_persona_mapping: "Map Persona",
@@ -35,7 +33,7 @@ const BANNER_CONFIG = {
   },
   needs_human_research: {
     className: "banner--orange",
-    text: "Groundedness check failed. Review carefully before sending.",
+    text: (detail) => detail.escalation_reason || "Groundedness check failed. Review carefully before sending.",
   },
   failed: {
     className: "banner--red",

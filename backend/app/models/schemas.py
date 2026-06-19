@@ -91,6 +91,7 @@ class DraftOut(BaseModel):
     run_id: str
     version: Optional[int] = None
     subject: Optional[str] = None
+    subject_alt: Optional[str] = None
     body: Optional[str] = None
     sources_used: Optional[str] = None
     rubric_scores: Optional[str] = None

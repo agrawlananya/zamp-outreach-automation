@@ -20,13 +20,13 @@ The `PipelineOrchestrator` runs these in sequence. Each stage is a standalone fu
 
 ```
 Stage 1   intake_and_normalize(prospect)           → NormalizedProspect
-Stage 2   research_company(domain)                 → RawCorpus
-Stage 3   research_individual(name, company)       → RawCorpus
-Stage 4   extract_signals(corpora)                 → list[Signal]       # LLM: extractor
-Stage 5   validate_signals(signals)                → list[Signal]       # LLM: verifier
+Stage 2   research_prospect(name, company)         → (RawCorpus, RawCorpus)  # company + individual, capped at 12 URLs, scraped concurrently
+Stage 4   extract_signals(corpora)                 → list[Signal]       # LLM: extractor, parallelized across pages
+Stage 5   validate_signals(signals)                → list[Signal]       # LLM: verifier, parallelized across signals
 Stage 6   map_persona(title)                       → Persona
-Stage 7   map_pain(signals, persona)               → list[PainMapping]
-Stage 8   score_and_select_hook(signals, pains)    → HookSelection
+Stage -   rank_candidate_signals(signals)          → top-K signals      # deterministic, no LLM call
+Stage 7   map_pain(top_k_signals, persona)         → list[PainMapping]  # LLM: pain-mapping, parallelized across signals
+Stage 8   score_and_select_hook(top_k_signals, pains) → HookSelection
 Stage 9   generate_draft(hook, persona, pains)     → Draft              # LLM: writer
 Stage 10  score_draft(draft, signals)              → RubricScore        # LLM: critic
 Stage 11  route(rubric_score, hook_score)          → RunStatus          # deterministic
@@ -40,9 +40,9 @@ All use Claude (Anthropic). The same model must not both generate and solely ver
 
 | Role | Stage | Temp | Contract |
 |---|---|---|---|
-| **Extractor** | 4 | 0.1 | Emit a claim only if a verbatim `source_snippet` from the input text supports it. No inference beyond what is literally stated. |
+| **Extractor** | 4 | 0.1 | Emit a claim only if a verbatim `source_snippet` from the input text supports it. No inference beyond what is literally stated. Returns at most 3 signals per page, prioritizing the most recent/specific. |
 | **Verifier** | 5 | 0.1 | Given `{claim, source_snippet}` (no prior context), return `valid / invalid / uncertain` + one-line reason. |
-| **Writer** | 9 | 0.5 | Given `{hook, persona, pain_mappings, validated_signals_only}`. Write subject + 60–90 word body. May not introduce any fact not present in the supplied signal set. |
+| **Writer** | 9 | 0.5 | Given `{hook, persona, pain_mappings, prospect_first_name, sender_name, sender_title}`. Returns `subject` + `subject_alt` (A/B options, lowercase, <42 chars) + a 70-110 word `body`: greeting (first name only) → 3 short paragraphs (hook / value+credibility / one-question CTA) → sign-off. No em/en dashes (enforced by prompt + a post-generation sanitizer in `stage9_draft_generation.py`). May not introduce any fact not present in the supplied signal set. Sender identity comes from `SENDER_NAME`/`SENDER_TITLE` settings (no per-user concept yet). |
 | **Critic** | 10 | 0.1 | Score draft against rubric (relevance, specificity, personalization depth, credibility, clarity, brevity, groundedness). Return structured scores. Groundedness fail = automatic flag. |
 
 ---
@@ -60,6 +60,8 @@ hook_score = (
 # Each sub-score in [0.0, 1.0]
 # Gate: hook_score < 0.45 → route to insufficient_signal
 ```
+
+Before pain-mapping, validated signals are pre-ranked by `stage8_hook_scoring.rank_candidate_signals` on the four sub-scores that don't depend on pain-mapping (specificity, recency, actionability, verifiability — no LLM call involved). Only the top 8 go on to pain-mapping and hook-scoring; this avoids spending a pain-mapping LLM call on a signal that has no realistic chance of being selected as the hook. Stage 10's groundedness check still sees every validated signal, not just the top 8.
 
 All sub-scores for all candidate signals are stored and surfaced in the UI — not just the winner.
 
@@ -108,7 +110,7 @@ owned_pain TEXT, owned_kpi TEXT, zamp_value_prop TEXT
 
 -- drafts
 id TEXT PK, run_id TEXT FK, version INTEGER,
-subject TEXT, body TEXT, sources_used TEXT (JSON array of signal ids),
+subject TEXT, subject_alt TEXT, body TEXT, sources_used TEXT (JSON array of signal ids),
 rubric_scores TEXT (JSON), groundedness_pass BOOLEAN, created_at TIMESTAMP
 
 -- review_actions
@@ -180,14 +182,16 @@ status TEXT (ok|degraded|failed), error_message TEXT, created_at TIMESTAMP
 ## Signal Types (reference)
 
 Common values for `signals.type`:
-`new_cfo`, `new_controller`, `role_change`, `funding_round`, `acquisition`, `ipo_prep`, `hiring_finance`, `audit_finding`, `erp_migration`, `regulatory_change`, `leadership_change`, `earnings_call_mention`
+`new_cfo`, `new_general_counsel`, `new_cmo`, `new_ciso`, `new_controller`, `role_change`, `funding_round`, `acquisition`, `ipo_prep`, `hiring_finance`, `audit_finding`, `system_migration`, `regulatory_change`, `leadership_change`, `earnings_call_mention`
 
-This list is not exhaustive — the extractor LLM determines type from source content.
+This list is not exhaustive — the extractor LLM determines type from source content, across any function (not just finance).
+
+Hook-scoring actionability (stage 8) is pattern-based, not a finance-only allowlist: any type prefixed `new_` or suffixed `_migration`, plus a fixed set of cross-functional event categories (`role_change`, `leadership_change`, `funding_round`, `acquisition`, `ipo_prep`, `merger`, `reorg`, `regulatory_change`, `system_migration`), scores actionability 1.0. See `app/pipeline/stage8_hook_scoring.py`.
 
 ---
 
 ## Persona Library (Static Config)
 
-Loaded from `services/persona_library.py`. Five entries: `CFO`, `Controller`, `VP Finance`, `Head of Accounting`, `Finance/AP Ops Lead`. Each has: `goals[]`, `pains[]`, `kpis[]`, `messaging_angle`, `zamp_value_prop`.
+Loaded from `services/persona_library.py`. A dict keyed by lowercase title alias (70+ aliases), organized into ~14 functional sections (Exec/Board, Finance & Accounting, Procurement, Compliance & Risk, Legal, Marketing, Sales, IT & Technology, Cybersecurity, Product & Engineering, RevOps & GTM, Customer Success & Support, Recruiting & People Ops, Data Operations, Operations). Each persona has: `name`, `buyer_type` (`economic` | `functional` | `manager`, per Miller Heiman), `goals[]`, `pains[]`, `kpis[]`, `messaging_angle`, `zamp_value_prop`.
 
 Stage 6 does an exact title lookup first. If no match, uses the LLM to pick the nearest persona and sets `is_assumed=True` on the `persona_mappings` record.

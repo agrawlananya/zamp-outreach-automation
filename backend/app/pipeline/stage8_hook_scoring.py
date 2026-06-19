@@ -6,7 +6,17 @@ from sqlalchemy.orm import Session
 from app.models.db_models import PainMapping, Signal
 from app.services.scoring import compute_hook_score, score_is_sufficient
 
-ACTIONABLE_TYPES = {"new_cfo", "new_controller", "role_change", "funding_round", "erp_migration"}
+ACTIONABLE_TYPES = {
+    "role_change",
+    "leadership_change",
+    "funding_round",
+    "acquisition",
+    "ipo_prep",
+    "merger",
+    "reorg",
+    "regulatory_change",
+    "system_migration",
+}
 
 
 @dataclass
@@ -59,11 +69,33 @@ def _score_recency(signal: Signal) -> float:
 
 
 def _score_actionability(signal: Signal) -> float:
-    return 1.0 if signal.type in ACTIONABLE_TYPES else 0.5
+    signal_type = signal.type or ""
+    is_actionable = (
+        signal_type.startswith("new_")
+        or signal_type.endswith("_migration")
+        or signal_type in ACTIONABLE_TYPES
+    )
+    return 1.0 if is_actionable else 0.5
 
 
 def _score_verifiability(signal: Signal) -> float:
     return 1.0 if signal.source_snippet and len(signal.source_snippet) > 50 else 0.5
+
+
+def rank_candidate_signals(signals: list[Signal], limit: int = 8) -> list[Signal]:
+    """Cheaply pre-rank validated signals on the four sub-scores that don't require
+    pain-mapping (relevance is excluded — it can only be computed after pain-mapping
+    has run), so expensive per-signal LLM work downstream only happens for the
+    signals with a real shot at being selected as the hook."""
+    def candidate_score(signal: Signal) -> float:
+        return (
+            _score_specificity(signal)
+            + _score_recency(signal)
+            + _score_actionability(signal)
+            + _score_verifiability(signal)
+        )
+
+    return sorted(signals, key=candidate_score, reverse=True)[:limit]
 
 
 def score_and_select_hook(

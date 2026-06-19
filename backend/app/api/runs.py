@@ -22,8 +22,7 @@ router = APIRouter()
 
 STAGE_ORDER = [
     "stage1_intake",
-    "stage2_company_research",
-    "stage3_individual_research",
+    "stage2_research",
     "stage4_extract_signals",
     "stage5_validate_signals",
     "stage6_persona_mapping",

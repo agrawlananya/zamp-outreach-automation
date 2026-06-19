@@ -10,8 +10,7 @@ from app.models.db_models import AuditLog, Draft, PainMapping, PersonaMapping, R
 from app.models.schemas import NormalizedProspect, RawCorpus
 from app.pipeline import (
     stage1_intake,
-    stage2_company_research,
-    stage3_individual_research,
+    stage2_research,
     stage4_extract_signals,
     stage5_validate_signals,
     stage6_persona_mapping,
@@ -33,15 +32,6 @@ def _signal_snapshot(signal: Signal) -> dict:
         "validated": signal.validated,
         "hook_score": signal.hook_score,
         "selected_as_hook": signal.selected_as_hook,
-    }
-
-
-def _corpus_snapshot(corpus: RawCorpus) -> dict:
-    return {
-        "source": corpus.source,
-        "item_count": len(corpus.items),
-        "thin_corpus": corpus.thin_corpus,
-        "role_change_detected": corpus.role_change_detected,
     }
 
 
@@ -86,25 +76,32 @@ class PipelineOrchestrator:
             self._fail_run(db, run, start_time)
             return
 
-        # Stage 2 — company research (continuable: degrades to an empty corpus)
-        company_corpus, ok = self._execute_stage(
-            db, run, "stage2_company_research", None, {"domain": normalized.company_domain},
-            lambda: stage2_company_research.research_company(
-                normalized.company_domain, normalized.company_name, normalized.name
-            ),
-            output_snapshot_fn=_corpus_snapshot,
+        # Stage 2 — unified company + individual research (continuable: degrades to two empty corpora)
+        research_result, ok = self._execute_stage(
+            db, run, "stage2_research", None,
+            {"name": normalized.name, "company": normalized.company_name},
+            lambda: stage2_research.research_prospect(normalized.name, normalized.company_name),
+            output_snapshot_fn=lambda r: {
+                "company_items": len(r[0].items),
+                "individual_items": len(r[1].items),
+            },
             continuable=True,
-            fallback=RawCorpus(source="company", items=[]),
+            fallback=(RawCorpus(source="company", items=[]), RawCorpus(source="individual", items=[])),
         )
+        company_corpus, individual_corpus = research_result
 
-        # Stage 3 — individual research (continuable: degrades to an empty corpus)
-        individual_corpus, ok = self._execute_stage(
-            db, run, "stage3_individual_research", None, {"name": normalized.name},
-            lambda: stage3_individual_research.research_individual(normalized.name, normalized.company_name),
-            output_snapshot_fn=_corpus_snapshot,
-            continuable=True,
-            fallback=RawCorpus(source="individual", items=[]),
-        )
+        # EC-4: research turned up nothing usable for either corpus — no point continuing
+        # the pipeline downstream, escalate straight to human research.
+        if len(company_corpus.items) == 0 and len(individual_corpus.items) == 0:
+            run.escalation_reason = (
+                "No research data could be gathered for this prospect. Tavily returned no "
+                "usable results for either the company or the individual."
+            )
+            run.status = "needs_human_research"
+            run.completed_at = datetime.utcnow()
+            run.time_to_draft_ms = int((time.time() - start_time) * 1000)
+            db.commit()
+            return
 
         # EC-3: prospect appears to have moved to a different company than submitted — too
         # ambiguous to draft confidently, so escalate to a human rather than guess.
@@ -149,10 +146,14 @@ class PipelineOrchestrator:
             self._fail_run(db, run, start_time)
             return
 
+        # Cheap, deterministic pre-filter (no LLM calls): only the signals with a real shot at
+        # being selected as the hook are worth spending a pain-mapping LLM call on.
+        candidate_signals = stage8_hook_scoring.rank_candidate_signals(validated_signals)
+
         # Stage 7 — pain mapping (continuable: degrades to no pain mappings, lowers relevance scores)
         pain_mappings, ok = self._execute_stage(
-            db, run, "stage7_pain_mapping", None, {"signal_count": len(validated_signals)},
-            lambda: stage7_pain_mapping.map_pain(validated_signals, persona_mapping, run_id, db),
+            db, run, "stage7_pain_mapping", None, {"signal_count": len(candidate_signals)},
+            lambda: stage7_pain_mapping.map_pain(candidate_signals, persona_mapping, run_id, db),
             output_snapshot_fn=lambda r: {"pain_mapping_count": len(r)},
             continuable=True,
             fallback=[],
@@ -164,9 +165,9 @@ class PipelineOrchestrator:
         force_low_confidence = company_corpus.thin_corpus and individual_corpus.thin_corpus
         hook_selection, ok = self._execute_stage(
             db, run, "stage8_hook_scoring", None,
-            {"signal_count": len(validated_signals), "force_low_confidence": force_low_confidence},
+            {"signal_count": len(candidate_signals), "force_low_confidence": force_low_confidence},
             lambda: stage8_hook_scoring.score_and_select_hook(
-                validated_signals, pain_mappings, run_id, db, force_low_confidence=force_low_confidence
+                candidate_signals, pain_mappings, run_id, db, force_low_confidence=force_low_confidence
             ),
             output_snapshot_fn=_hook_selection_snapshot,
         )
@@ -186,7 +187,7 @@ class PipelineOrchestrator:
             db, run, "stage9_draft_generation", "writer",
             {"hook_signal_id": hook_selection.selected_signal.id, "version": 1},
             lambda: stage9_draft_generation.generate_draft(
-                hook_selection.selected_signal, persona_mapping, pain_mappings, run_id, db, version=1
+                hook_selection.selected_signal, persona_mapping, pain_mappings, normalized.name, run_id, db, version=1
             ),
             output_snapshot_fn=_draft_snapshot,
         )
@@ -210,7 +211,7 @@ class PipelineOrchestrator:
                 db, run, "stage9_draft_generation", "writer",
                 {"hook_signal_id": hook_selection.selected_signal.id, "version": 2, "reason": "groundedness_retry"},
                 lambda: stage9_draft_generation.generate_draft(
-                    hook_selection.selected_signal, persona_mapping, pain_mappings, run_id, db, version=2
+                    hook_selection.selected_signal, persona_mapping, pain_mappings, normalized.name, run_id, db, version=2
                 ),
                 output_snapshot_fn=_draft_snapshot,
             )
@@ -273,6 +274,7 @@ class PipelineOrchestrator:
             self._log_audit(db, run.id, stage_name, input_snapshot, None, model_used, latency_ms, status, str(e))
             if continuable:
                 return fallback, True
+            run.escalation_reason = str(e)
             return None, False
 
         latency_ms = int((time.time() - t0) * 1000)
