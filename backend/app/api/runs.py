@@ -24,10 +24,17 @@ from app.models.schemas import (
     PersonaMappingOut,
     RoleConfirmationOut,
     RunDetailResponse,
+    RunListItem,
+    RunListResponse,
     RunStatusResponse,
     SignalOut,
 )
 from app.pipeline.orchestrator import run_pipeline_in_background
+from app.services.run_readmodel import (
+    groundedness_ratio,
+    hook_signal_type_and_domain,
+    personalization_depth,
+)
 
 router = APIRouter()
 
@@ -94,11 +101,18 @@ def get_run_status(run_id: str, db: Session = Depends(get_db)):
     return RunStatusResponse(status=run.status, current_stage=run.current_stage, percent_complete=percent_complete)
 
 
-@router.get("/api/runs")
+SORT_COLUMNS = {
+    "newest": Run.started_at.desc(),
+    "status": Run.status.asc(),
+}
+
+
+@router.get("/api/runs", response_model=RunListResponse)
 def list_runs(
     status: Optional[str] = None,
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=20, ge=1, le=100),
+    sort: str = Query(default="newest", pattern="^(newest|score|status)$"),
     db: Session = Depends(get_db),
 ):
     query = db.query(Run)
@@ -106,7 +120,15 @@ def list_runs(
         query = query.filter(Run.status == status)
 
     total = query.count()
-    runs = query.order_by(Run.started_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
+
+    if sort == "score":
+        query = query.outerjoin(
+            Signal, (Signal.run_id == Run.id) & (Signal.selected_as_hook == True)  # noqa: E712
+        ).order_by(Signal.hook_score.desc())
+    else:
+        query = query.order_by(SORT_COLUMNS[sort])
+
+    runs = query.offset((page - 1) * per_page).limit(per_page).all()
 
     items = []
     for run in runs:
@@ -123,20 +145,33 @@ def list_runs(
             if latest_draft
             else None
         )
+        persona_mapping = db.query(PersonaMapping).filter(PersonaMapping.run_id == run.id).first()
+        grounded, total_facts, pct = groundedness_ratio(latest_draft)
+        signal_type, signal_source_domain = hook_signal_type_and_domain(run.id, db)
+
         items.append(
-            {
-                "id": run.id,
-                "prospect_name": prospect.name if prospect else None,
-                "company": prospect.company_name if prospect else None,
-                "status": run.status,
-                "top_hook_score": top_signal.hook_score if top_signal else None,
-                "time_to_draft_ms": run.time_to_draft_ms,
-                "human_decision": review_action.action if review_action else None,
-                "created_at": run.started_at,  # runs has no created_at column; started_at is the closest analog
-            }
+            RunListItem(
+                id=run.id,
+                prospect_name=prospect.name if prospect else None,
+                company=prospect.company_name if prospect else None,
+                status=run.status,
+                top_hook_score=top_signal.hook_score if top_signal else None,
+                time_to_draft_ms=run.time_to_draft_ms,
+                human_decision=review_action.action if review_action else None,
+                created_at=run.started_at,  # runs has no created_at column; started_at is the closest analog
+                title=prospect.title if prospect else None,
+                persona_name=persona_mapping.persona_name if persona_mapping else None,
+                persona_assumed=persona_mapping.is_assumed if persona_mapping else None,
+                groundedness_pct=pct,
+                groundedness_grounded=grounded,
+                groundedness_total=total_facts,
+                personalization_depth=personalization_depth(run, db),
+                signal_type=signal_type,
+                signal_source_domain=signal_source_domain,
+            )
         )
 
-    return {"items": items, "page": page, "per_page": per_page, "total": total}
+    return RunListResponse(items=items, page=page, per_page=per_page, total=total)
 
 
 @router.post("/api/runs/{run_id}/retry")

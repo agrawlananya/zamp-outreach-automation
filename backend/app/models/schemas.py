@@ -168,3 +168,36 @@ class MetricsResponse(BaseModel):
     escalation_rate: float
     avg_time_to_draft_ms: float
     avg_personalization_depth: float
+    accepted_count: Optional[int] = None
+    reviewed_count: Optional[int] = None
+    groundedness_drafts_pass: Optional[int] = None
+    groundedness_drafts_total: Optional[int] = None
+    escalated_count: Optional[int] = None
+    completed_count: Optional[int] = None
+
+
+class RunListItem(BaseModel):
+    id: str
+    prospect_name: Optional[str] = None
+    company: Optional[str] = None
+    status: str
+    top_hook_score: Optional[float] = None
+    time_to_draft_ms: Optional[int] = None
+    human_decision: Optional[str] = None
+    created_at: Optional[datetime] = None
+    title: Optional[str] = None
+    persona_name: Optional[str] = None
+    persona_assumed: Optional[bool] = None
+    groundedness_pct: Optional[int] = None
+    groundedness_grounded: Optional[int] = None
+    groundedness_total: Optional[int] = None
+    personalization_depth: Optional[int] = None
+    signal_type: Optional[str] = None
+    signal_source_domain: Optional[str] = None
+
+
+class RunListResponse(BaseModel):
+    items: list[RunListItem]
+    page: int
+    per_page: int
+    total: int
