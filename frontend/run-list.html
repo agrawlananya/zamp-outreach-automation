@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zamp AI SDR — Run List</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app-shell"></div>
+  <main class="app-main">
+    <div class="content">
+      <h1>Run List</h1>
+      <p class="muted">Every research run, scored and ready to triage.</p>
+
+      <div id="load-error" class="banner banner--red" hidden></div>
+
+      <div class="table-toolbar">
+        <label for="search-input" class="visually-hidden">Search</label>
+        <input
+          type="text"
+          id="search-input"
+          class="table-toolbar__search"
+          placeholder="Search prospect or company…"
+        />
+
+        <label for="status-filter">Status</label>
+        <select id="status-filter">
+          <option value="">All</option>
+          <option value="pending">Pending</option>
+          <option value="running">Running</option>
+          <option value="ready_for_review">Ready for review</option>
+          <option value="insufficient_signal">Insufficient signal</option>
+          <option value="needs_human_research">Needs research</option>
+          <option value="reviewed">Reviewed</option>
+          <option value="deprioritized">Deprioritized</option>
+          <option value="failed">Failed</option>
+        </select>
+
+        <label for="sort-select">Sort</label>
+        <select id="sort-select">
+          <option value="newest">Newest</option>
+          <option value="score">Score</option>
+          <option value="status">Status</option>
+        </select>
+
+        <span class="table-toolbar__spacer"></span>
+
+        <button type="button" id="export-btn" class="btn btn--secondary btn--small">Export CSV</button>
+      </div>
+
+      <table class="data-table" id="run-list-table">
+        <thead>
+          <tr>
+            <th>Prospect</th>
+            <th>Title</th>
+            <th>Company</th>
+            <th>Persona</th>
+            <th>Status</th>
+            <th>Groundedness</th>
+            <th>Depth</th>
+            <th>Updated</th>
+          </tr>
+        </thead>
+        <tbody id="run-list-body"></tbody>
+      </table>
+
+      <div class="pagination">
+        <span class="pagination__info" id="pagination-info"></span>
+        <div class="pagination__controls">
+          <button type="button" id="prev-page-btn" class="btn btn--secondary btn--small">Previous</button>
+          <button type="button" id="next-page-btn" class="btn btn--secondary btn--small">Next</button>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script type="module">
+    import { renderLayout } from "./js/layout.js";
+    renderLayout({ active: "runs", title: "Run List" });
+  </script>
+  <script type="module" src="js/run-list.js"></script>
+</body>
+</html>
