@@ -61,11 +61,17 @@
         <div id="role-confirmation-note" class="muted" hidden></div>
         <div class="review-layout">
           <section class="card draft-panel">
-            <h2>Draft</h2>
+            <div class="draft-panel__header">
+              <h3 class="draft-panel__eyebrow">Generated Draft</h3>
+              <span id="groundedness-pill" class="badge" hidden></span>
+            </div>
+
             <label for="draft-subject">Subject</label>
             <input type="text" id="draft-subject" />
-            <label for="draft-body">Body</label>
-            <textarea id="draft-body" rows="8"></textarea>
+
+            <label>Body</label>
+            <div id="draft-body-rendered" class="draft-body"></div>
+            <textarea id="draft-body" class="draft-body draft-body--edit" rows="10" hidden></textarea>
 
             <div id="reject-reason-box" class="reject-reason-box" hidden>
               <label for="reject-reason">Reason for rejection</label>
@@ -73,13 +79,11 @@
             </div>
 
             <div class="actions">
-              <button id="approve-btn" class="btn btn--primary">Approve</button>
-              <button id="approve-edits-btn" class="btn">Approve with Edits</button>
               <button id="reject-btn" class="btn btn--danger">Reject</button>
+              <button id="approve-edits-btn" class="btn btn--secondary">Approve with Edits</button>
+              <button id="approve-btn" class="btn btn--success">Approve</button>
             </div>
             <div id="decision-confirmation" class="confirmation" hidden>Decision recorded.</div>
-
-            <div id="annotated-body" class="annotated-body" hidden></div>
           </section>
 
           <section class="card reasoning-panel">
@@ -96,6 +100,6 @@
     import { renderLayout } from "./js/layout.js";
     renderLayout({ active: "", title: "Run Detail" });
   </script>
-  <script type="module" src="js/run-view.js?v=3"></script>
+  <script type="module" src="js/run-view.js?v=4"></script>
 </body>
 </html>
