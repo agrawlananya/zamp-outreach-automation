@@ -1,30 +1,30 @@
 import { getRunStatus, getRunDetail, retryRun, submitReview } from "./api.js";
 
-const STAGE_ORDER = [
-  "stage1_intake",
-  "stage2_research",
-  "stage4_extract_signals",
-  "stage5_validate_signals",
-  "stage6_persona_mapping",
-  "stage7_pain_mapping",
-  "stage8_hook_scoring",
-  "stage9_draft_generation",
-  "stage10_quality_scoring",
-  "stage11_routing",
-];
-
-const STAGE_LABELS = {
+const BACKEND_STAGE_LABELS = {
   stage1_intake: "Intake & Normalize",
-  stage2_research: "Research Company & Individual",
+  stage2_research: "Web Research",
+  stage3_role_confirmation: "Role Confirmation",
   stage4_extract_signals: "Extract Signals",
   stage5_validate_signals: "Validate Signals",
-  stage6_persona_mapping: "Map Persona",
-  stage7_pain_mapping: "Map Pain",
-  stage8_hook_scoring: "Score & Select Hook",
-  stage9_draft_generation: "Generate Draft",
-  stage10_quality_scoring: "Score Draft Quality",
-  stage11_routing: "Route Run",
+  stage6_persona_mapping: "Persona Mapping",
+  stage7_pain_mapping: "Pain Mapping",
+  stage8_hook_scoring: "Hook Scoring",
+  stage9_draft_generation: "Draft Generation",
+  stage10_quality_scoring: "Quality Scoring",
+  stage11_routing: "Routing",
 };
+
+// 11 backend stages grouped into the 8 rows the UI shows (per shared context mapping).
+const PIPELINE_GROUPS = [
+  { label: "Intake & Parsing", stages: ["stage1_intake", "stage3_role_confirmation"] },
+  { label: "Web Research", stages: ["stage2_research"] },
+  { label: "Signal Extraction", stages: ["stage4_extract_signals"] },
+  { label: "Signal Validation", stages: ["stage5_validate_signals"] },
+  { label: "Persona & Pain Mapping", stages: ["stage6_persona_mapping", "stage7_pain_mapping"] },
+  { label: "Hook Scoring & Selection", stages: ["stage8_hook_scoring"] },
+  { label: "Draft Generation", stages: ["stage9_draft_generation"] },
+  { label: "Quality Check & Scoring", stages: ["stage10_quality_scoring", "stage11_routing"] },
+];
 
 const BANNER_CONFIG = {
   insufficient_signal: {
@@ -54,9 +54,16 @@ if (!runId) {
 const livePhase = document.getElementById("live-phase");
 const reviewPhase = document.getElementById("review-phase");
 const loadError = document.getElementById("load-error");
-const stageList = document.getElementById("stage-list");
+const viewLogsBtn = document.getElementById("view-logs-btn");
+const logsPanel = document.getElementById("logs-panel");
 
 let pollTimer = null;
+
+if (viewLogsBtn && logsPanel) {
+  viewLogsBtn.addEventListener("click", () => {
+    logsPanel.hidden = !logsPanel.hidden;
+  });
+}
 
 function escapeHtml(value) {
   const div = document.createElement("div");
@@ -66,6 +73,44 @@ function escapeHtml(value) {
 
 function formatScore(value) {
   return value === null || value === undefined ? "—" : Number(value).toFixed(2);
+}
+
+function formatLatency(ms) {
+  if (ms === null || ms === undefined) return "";
+  return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
+}
+
+function formatTimestamp(value) {
+  if (!value) return "—";
+  return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function getInitials(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  const first = parts[0][0] || "";
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (first + last).toUpperCase();
+}
+
+function getDomain(url) {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch (e) {
+    return null;
+  }
+}
+
+function safeParseArray(value) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
 }
 
 function valenceTag(valence) {
@@ -91,31 +136,168 @@ function signalStatusCell(s) {
   return s.selected_as_hook ? "Selected" : "Considered — not selected";
 }
 
-function renderStageList(currentStage, runStatus, degradedStages) {
-  const currentIndex = STAGE_ORDER.indexOf(currentStage);
+// ============================================================
+// Running state — header, execution pipeline, contextual signals
+// ============================================================
 
-  stageList.innerHTML = STAGE_ORDER.map((stageName, index) => {
-    let stateClass = "stage-item--pending";
-    let icon = "○";
+function currentGroupIndex(currentStage) {
+  const idx = PIPELINE_GROUPS.findIndex((g) => g.stages.includes(currentStage));
+  return idx === -1 ? 0 : idx;
+}
 
-    if (degradedStages.has(stageName)) {
-      stateClass = "stage-item--degraded";
-      icon = "⚠";
-    } else if (currentIndex !== -1 && index < currentIndex) {
-      stateClass = "stage-item--done";
-      icon = "✓";
-    } else if (currentIndex !== -1 && index === currentIndex) {
-      if (NON_TERMINAL_STATUSES.has(runStatus)) {
-        stateClass = "stage-item--running";
-        icon = "";
-      } else {
-        stateClass = "stage-item--done";
-        icon = "✓";
-      }
+function renderRunHeader(detail, status) {
+  const avatar = document.getElementById("run-avatar");
+  const nameEl = document.getElementById("run-name");
+  const metaEl = document.getElementById("run-meta");
+  const stageCountEl = document.getElementById("run-stage-count");
+  if (!avatar || !nameEl || !metaEl || !stageCountEl) return;
+
+  avatar.textContent = getInitials(detail.prospect_name);
+  nameEl.textContent = detail.prospect_name || "Prospect";
+
+  const metaParts = [detail.prospect_title, detail.company_name].filter(Boolean);
+  if (detail.persona_mapping && detail.persona_mapping.persona_name) {
+    const assumed = detail.persona_mapping.is_assumed ? " (assumed)" : "";
+    metaParts.push(`${detail.persona_mapping.persona_name}${assumed}`);
+  }
+  metaEl.textContent = metaParts.length ? metaParts.join(" · ") : "";
+
+  const stageNumber = Math.min(currentGroupIndex(status.current_stage) + 1, PIPELINE_GROUPS.length);
+  stageCountEl.textContent = `Stage ${stageNumber} of ${PIPELINE_GROUPS.length}`;
+}
+
+function latestAuditByStage(auditLog) {
+  const map = new Map();
+  (auditLog || []).forEach((entry) => {
+    map.set(entry.stage, entry);
+  });
+  return map;
+}
+
+function renderPipelineExpand(detail) {
+  const persona = detail.persona_mapping;
+  if (!persona) return "";
+
+  const kpis = safeParseArray(persona.kpis);
+  const pains = safeParseArray(persona.pains);
+
+  return `<div class="pipeline-expand">
+    <h4>Matched Persona</h4>
+    <div class="pipeline-expand__row">
+      <strong>${escapeHtml(persona.persona_name || "—")}</strong>${persona.is_assumed ? ' <span class="tag">ASSUMED</span>' : ""}
+    </div>
+    ${
+      kpis.length
+        ? `<div class="pipeline-expand__row">KPIs<ul class="pipeline-expand__list">${kpis
+            .map((k) => `<li>${escapeHtml(k)}</li>`)
+            .join("")}</ul></div>`
+        : ""
+    }
+    ${
+      pains.length
+        ? `<div class="pipeline-expand__row">Pain Points<ul class="pipeline-expand__list">${pains
+            .map((p) => `<li>${escapeHtml(p)}</li>`)
+            .join("")}</ul></div>`
+        : ""
+    }
+  </div>`;
+}
+
+function renderPipeline(detail, status) {
+  const container = document.getElementById("pipeline-list");
+  if (!container) return;
+
+  const auditByStage = latestAuditByStage(detail.audit_log);
+  const activeGroupIndex = currentGroupIndex(status.current_stage);
+  const isLive = NON_TERMINAL_STATUSES.has(status.status);
+
+  container.innerHTML = PIPELINE_GROUPS.map((group, index) => {
+    const entries = group.stages.map((s) => auditByStage.get(s)).filter(Boolean);
+    const isDegraded = entries.some((e) => e.status === "degraded" || e.status === "failed");
+    const isActive = !isDegraded && index === activeGroupIndex && isLive;
+    const isDone = !isDegraded && !isActive && (index < activeGroupIndex || (index === activeGroupIndex && !isLive));
+
+    let stateClass = "queued";
+    let icon = "";
+    let meta = "";
+
+    if (isDegraded) {
+      stateClass = "degraded";
+      icon = "&#9650;";
+      meta = "Degraded";
+    } else if (isActive) {
+      stateClass = "active";
+      meta = "Running…";
+    } else if (isDone) {
+      stateClass = "done";
+      icon = "&#10003;";
+      const totalLatency = entries.reduce((sum, e) => sum + (e.latency_ms || 0), 0);
+      meta = entries.length ? formatLatency(totalLatency) : "";
     }
 
-    return `<li class="stage-item ${stateClass}"><span class="stage-item__icon">${icon}</span><span class="stage-item__label">${STAGE_LABELS[stageName]}</span></li>`;
+    const rowClass = `stage-row${isActive ? " stage-row--active" : ""}${stateClass === "queued" ? " stage-row--queued" : ""}`;
+    const expandHtml = isActive ? renderPipelineExpand(detail) : "";
+
+    return `<div class="pipeline-group">
+      <div class="${rowClass}">
+        <span class="stage-row__icon stage-row__icon--${stateClass}">${icon}</span>
+        <span class="stage-row__label">${escapeHtml(group.label)}</span>
+        <span class="stage-row__meta">${escapeHtml(meta)}</span>
+      </div>
+      ${expandHtml}
+    </div>`;
   }).join("");
+}
+
+function renderSignalsPanel(detail) {
+  const container = document.getElementById("signals-list");
+  if (!container) return;
+
+  const signals = detail.signals || [];
+
+  if (!signals.length) {
+    container.innerHTML = `<p class="signals-empty">No signals extracted yet.</p>`;
+    return;
+  }
+
+  container.innerHTML = signals
+    .map((s) => {
+      const domain = getDomain(s.source_url);
+      const sourceLine = s.source_url
+        ? `<span class="snippet__source">${escapeHtml(domain || "")}${domain ? " · " : ""}<a href="${escapeHtml(s.source_url)}" target="_blank" rel="noopener">${escapeHtml(s.source_url)}</a></span>`
+        : "";
+      const snippet = s.source_snippet ? `<div class="snippet">${escapeHtml(s.source_snippet)}</div>` : "";
+
+      return `<div class="signal-card">
+        <div class="signal-card__label">${escapeHtml(s.claim || s.type || "Signal")}</div>
+        ${sourceLine}
+        ${snippet}
+      </div>`;
+    })
+    .join("");
+}
+
+function renderLogsPanel(detail) {
+  const body = document.getElementById("logs-body");
+  if (!body) return;
+
+  const entries = detail.audit_log || [];
+
+  if (!entries.length) {
+    body.innerHTML = `<tr class="table-empty-row"><td colspan="4">No log entries yet.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = entries
+    .map(
+      (e) => `<tr>
+        <td>${escapeHtml(BACKEND_STAGE_LABELS[e.stage] || e.stage || "—")}</td>
+        <td>${escapeHtml((e.status || "—").toUpperCase())}</td>
+        <td>${formatLatency(e.latency_ms)}</td>
+        <td>${formatTimestamp(e.created_at)}</td>
+      </tr>`
+    )
+    .join("");
 }
 
 function renderStatusBanner(detail) {
@@ -402,15 +584,12 @@ async function pollStatus() {
 
     renderFixtureBadge(detail);
 
-    const degradedStages = new Set(
-      (detail.audit_log || [])
-        .filter((entry) => entry.status === "degraded" || entry.status === "failed")
-        .map((entry) => entry.stage)
-    );
-
-    renderStageList(status.current_stage, status.status, degradedStages);
-
-    if (!NON_TERMINAL_STATUSES.has(status.status)) {
+    if (NON_TERMINAL_STATUSES.has(status.status)) {
+      renderRunHeader(detail, status);
+      renderPipeline(detail, status);
+      renderSignalsPanel(detail);
+      renderLogsPanel(detail);
+    } else {
       if (pollTimer) {
         clearInterval(pollTimer);
         pollTimer = null;

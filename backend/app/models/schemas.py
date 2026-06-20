@@ -140,6 +140,9 @@ class RunDetailResponse(BaseModel):
 
     id: str
     prospect_id: str
+    prospect_name: Optional[str] = None
+    prospect_title: Optional[str] = None
+    company_name: Optional[str] = None
     status: str
     current_stage: Optional[str] = None
     started_at: Optional[datetime] = None

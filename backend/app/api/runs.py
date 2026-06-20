@@ -60,6 +60,7 @@ def get_run_detail(run_id: str, db: Session = Depends(get_db)):
     if run is None:
         raise HTTPException(status_code=404, detail="Run not found")
 
+    prospect = db.query(Prospect).filter(Prospect.id == run.prospect_id).first()
     signals = db.query(Signal).filter(Signal.run_id == run_id).all()
     persona_mapping = db.query(PersonaMapping).filter(PersonaMapping.run_id == run_id).first()
     pain_mappings = db.query(PainMapping).filter(PainMapping.run_id == run_id).all()
@@ -70,6 +71,9 @@ def get_run_detail(run_id: str, db: Session = Depends(get_db)):
     return RunDetailResponse(
         id=run.id,
         prospect_id=run.prospect_id,
+        prospect_name=prospect.name if prospect else None,
+        prospect_title=prospect.title if prospect else None,
+        company_name=prospect.company_name if prospect else None,
         status=run.status,
         current_stage=run.current_stage,
         started_at=run.started_at,

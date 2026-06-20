@@ -16,10 +16,44 @@
     <div class="content">
       <span id="fixture-badge" class="badge badge--fixture" hidden>Fixture: reproducible research</span>
 
-      <div id="live-phase" class="card card--narrow" hidden>
-        <h1>Researching prospect…</h1>
-        <p class="muted">This usually takes under a minute.</p>
-        <ol class="stage-list" id="stage-list"></ol>
+      <div id="live-phase" hidden>
+        <div class="run-header">
+          <div class="run-header__left">
+            <div class="run-header__avatar" id="run-avatar"></div>
+            <div class="run-header__identity">
+              <div class="run-header__name-row">
+                <span class="run-header__name" id="run-name"></span>
+                <span class="badge badge--info"><span class="badge__dot"></span>RUNNING</span>
+              </div>
+              <div class="run-header__meta muted" id="run-meta"></div>
+            </div>
+          </div>
+          <div class="run-header__right">
+            <span class="run-header__stage-count" id="run-stage-count"></span>
+            <button type="button" id="view-logs-btn" class="btn btn--secondary btn--small">View Logs</button>
+          </div>
+        </div>
+
+        <div id="logs-panel" class="card logs-panel" hidden>
+          <h2>Audit Log</h2>
+          <table class="data-table">
+            <thead>
+              <tr><th>Stage</th><th>Status</th><th>Latency</th><th>Time</th></tr>
+            </thead>
+            <tbody id="logs-body"></tbody>
+          </table>
+        </div>
+
+        <div class="run-columns">
+          <section class="card pipeline-card">
+            <h2>Execution Pipeline</h2>
+            <div id="pipeline-list"></div>
+          </section>
+          <section class="card signals-card">
+            <h2>Contextual Signals</h2>
+            <div id="signals-list"></div>
+          </section>
+        </div>
       </div>
 
       <div id="review-phase" hidden>
@@ -62,6 +96,6 @@
     import { renderLayout } from "./js/layout.js";
     renderLayout({ active: "", title: "Run Detail" });
   </script>
-  <script type="module" src="js/run-view.js?v=2"></script>
+  <script type="module" src="js/run-view.js?v=3"></script>
 </body>
 </html>
