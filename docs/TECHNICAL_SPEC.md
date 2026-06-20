@@ -42,7 +42,7 @@ All use Claude (Anthropic). The same model must not both generate and solely ver
 |---|---|---|---|
 | **Extractor** | 4 | 0.1 | Emit a claim only if a verbatim `source_snippet` from the input text supports it. No inference beyond what is literally stated. Returns at most 3 signals per page, prioritizing the most recent/specific. |
 | **Verifier** | 5 | 0.1 | Given `{claim, source_snippet}` (no prior context), return `valid / invalid / uncertain` + one-line reason. |
-| **Writer** | 9 | 0.5 | Given `{hook, persona, pain_mappings, prospect_first_name, sender_name, sender_title}`. Returns `subject` + `subject_alt` (A/B options, lowercase, <42 chars) + a 70-110 word `body`: greeting (first name only) → 3 short paragraphs (hook / value+credibility / one-question CTA) → sign-off. No em/en dashes (enforced by prompt + a post-generation sanitizer in `stage9_draft_generation.py`). May not introduce any fact not present in the supplied signal set. Sender identity comes from `SENDER_NAME`/`SENDER_TITLE` settings (no per-user concept yet). |
+| **Writer** | 9 | 0.5 | Given `{hook, persona, pain_mappings, validated_signals_only}`. Write subject + 60–90 word body. May not introduce any fact not present in the supplied signal set. |
 | **Critic** | 10 | 0.1 | Score draft against rubric (relevance, specificity, personalization depth, credibility, clarity, brevity, groundedness). Return structured scores. Groundedness fail = automatic flag. |
 
 ---
@@ -161,7 +161,7 @@ status TEXT (ok|degraded|failed), error_message TEXT, created_at TIMESTAMP
 
 ## Frontend Pages (Plain HTML/CSS/JS)
 
-| File | Route | Purpose |
+| File | Route | Purpose | 
 |---|---|---|
 | `index.html` | `/` | Intake form: Name, Title, Company. POST to `/api/prospects`, redirect to run.html?id=... |
 | `run.html` | `/run.html?id=...` | Live Run View (polling) → auto-switches to Review once `status != running`. |

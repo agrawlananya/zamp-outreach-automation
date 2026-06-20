@@ -18,17 +18,30 @@ ROLE_CHANGE_PATTERN = re.compile(
     r"((?i:joins|appointed at|moves to))\s+([A-Z][\w&.,'-]*(?:\s+[A-Z][\w&.,'-]*){0,3})"
 )
 
+# Scraped pages can contain unrelated content (nav menus, "latest news" sidebars) far from
+# the actual article. A bare page-wide regex search will false-trigger on a "X joins Y"
+# headline about a completely different person. Requiring the prospect's name to appear
+# within this many characters of the match anchors the detection to text that's actually
+# about them, without needing sentence/paragraph boundaries (scrape_service flattens those).
+NAME_PROXIMITY_WINDOW_CHARS = 300
 
-def _detect_role_change(body_text: str, submitted_company_name: str) -> dict | None:
-    match = ROLE_CHANGE_PATTERN.search(body_text)
-    if not match:
-        return None
 
-    candidate_company = match.group(2).strip()
-    if candidate_company.lower() == submitted_company_name.lower():
-        return None
+def _detect_role_change(body_text: str, submitted_company_name: str, name: str) -> dict | None:
+    name_lower = name.lower()
 
-    return {"new_company": candidate_company, "trigger_phrase": match.group(1), "snippet": match.group(0)}
+    for match in ROLE_CHANGE_PATTERN.finditer(body_text):
+        window_start = max(0, match.start() - NAME_PROXIMITY_WINDOW_CHARS)
+        window_end = match.end() + NAME_PROXIMITY_WINDOW_CHARS
+        if name_lower not in body_text[window_start:window_end].lower():
+            continue
+
+        candidate_company = match.group(2).strip()
+        if candidate_company.lower() == submitted_company_name.lower():
+            continue
+
+        return {"new_company": candidate_company, "trigger_phrase": match.group(1), "snippet": match.group(0)}
+
+    return None
 
 
 def research_prospect(name: str, company_name: str) -> tuple[RawCorpus, RawCorpus]:
@@ -78,7 +91,7 @@ def research_prospect(name: str, company_name: str) -> tuple[RawCorpus, RawCorpu
                 company_items.append(item)
             continue
 
-        role_change = _detect_role_change(scraped["body_text"], company_name)
+        role_change = _detect_role_change(scraped["body_text"], company_name, name)
 
         if company_name.lower() not in body_lower and role_change is None:
             # The page never mentions the submitted company, and doesn't look like a
