@@ -4,41 +4,45 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Zamp AI SDR — New Prospect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/tokens.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <header class="app-header">
-    <div class="app-header__brand">Zamp AI SDR</div>
-    <nav class="app-header__nav">
-      <a href="index.html" class="active">New Prospect</a>
-      <a href="dashboard.html">Dashboard</a>
-    </nav>
-  </header>
-  <main class="content">
-    <div class="card card--narrow">
-      <h1>New Prospect</h1>
-      <p class="muted">Enter a prospect to research. We'll find a credible, source-backed reason to reach out.</p>
-      <form id="intake-form">
-        <label for="name">Name</label>
-        <input type="text" id="name" name="name" required />
+  <div id="app-shell"></div>
+  <main class="app-main">
+    <div class="content">
+      <div class="card card--narrow">
+        <h1>New Prospect</h1>
+        <p class="muted">Enter a prospect to research. We'll find a credible, source-backed reason to reach out.</p>
+        <form id="intake-form">
+          <label for="name">Name</label>
+          <input type="text" id="name" name="name" required />
 
-        <label for="title">Title</label>
-        <input type="text" id="title" name="title" required />
+          <label for="title">Title</label>
+          <input type="text" id="title" name="title" required />
 
-        <label for="company_name">Company</label>
-        <input type="text" id="company_name" name="company_name" required />
+          <label for="company_name">Company</label>
+          <input type="text" id="company_name" name="company_name" required />
 
-        <label for="fixture_id">Research source</label>
-        <select id="fixture_id" name="fixture_id">
-          <option value="">Live research (default)</option>
-        </select>
+          <label for="fixture_id">Research source</label>
+          <select id="fixture_id" name="fixture_id">
+            <option value="">Live research (default)</option>
+          </select>
 
-        <div id="error-box" class="error-box" hidden></div>
+          <div id="error-box" class="error-box" hidden></div>
 
-        <button type="submit" id="submit-button">Start Research</button>
-      </form>
+          <button type="submit" id="submit-button">Start Research</button>
+        </form>
+      </div>
     </div>
   </main>
+  <script type="module">
+    import { renderLayout } from "./js/layout.js";
+    renderLayout({ active: "new-research", title: "New Research" });
+  </script>
   <script type="module" src="js/intake.js"></script>
 </body>
 </html>

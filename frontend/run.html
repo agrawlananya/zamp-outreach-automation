@@ -4,58 +4,64 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Zamp AI SDR — Run</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/tokens.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <header class="app-header">
-    <div class="app-header__brand">Zamp AI SDR<span id="fixture-badge" class="badge badge--fixture" hidden>Fixture: reproducible research</span></div>
-    <nav class="app-header__nav">
-      <a href="index.html">New Prospect</a>
-      <a href="dashboard.html">Dashboard</a>
-    </nav>
-  </header>
-  <main class="content">
-    <div id="live-phase" class="card card--narrow" hidden>
-      <h1>Researching prospect…</h1>
-      <p class="muted">This usually takes under a minute.</p>
-      <ol class="stage-list" id="stage-list"></ol>
-    </div>
+  <div id="app-shell"></div>
+  <main class="app-main">
+    <div class="content">
+      <span id="fixture-badge" class="badge badge--fixture" hidden>Fixture: reproducible research</span>
 
-    <div id="review-phase" hidden>
-      <div id="status-banner" class="banner" hidden></div>
-      <div id="role-confirmation-note" class="muted" hidden></div>
-      <div class="review-layout">
-        <section class="card draft-panel">
-          <h2>Draft</h2>
-          <label for="draft-subject">Subject</label>
-          <input type="text" id="draft-subject" />
-          <label for="draft-body">Body</label>
-          <textarea id="draft-body" rows="8"></textarea>
-
-          <div id="reject-reason-box" class="reject-reason-box" hidden>
-            <label for="reject-reason">Reason for rejection</label>
-            <input type="text" id="reject-reason" />
-          </div>
-
-          <div class="actions">
-            <button id="approve-btn" class="btn btn--primary">Approve</button>
-            <button id="approve-edits-btn" class="btn">Approve with Edits</button>
-            <button id="reject-btn" class="btn btn--danger">Reject</button>
-          </div>
-          <div id="decision-confirmation" class="confirmation" hidden>Decision recorded.</div>
-
-          <div id="annotated-body" class="annotated-body" hidden></div>
-        </section>
-
-        <section class="card reasoning-panel">
-          <h2>Reasoning Trail</h2>
-          <div id="reasoning-trail"></div>
-        </section>
+      <div id="live-phase" class="card card--narrow" hidden>
+        <h1>Researching prospect…</h1>
+        <p class="muted">This usually takes under a minute.</p>
+        <ol class="stage-list" id="stage-list"></ol>
       </div>
-    </div>
 
-    <div id="load-error" class="card card--narrow" hidden></div>
+      <div id="review-phase" hidden>
+        <div id="status-banner" class="banner" hidden></div>
+        <div id="role-confirmation-note" class="muted" hidden></div>
+        <div class="review-layout">
+          <section class="card draft-panel">
+            <h2>Draft</h2>
+            <label for="draft-subject">Subject</label>
+            <input type="text" id="draft-subject" />
+            <label for="draft-body">Body</label>
+            <textarea id="draft-body" rows="8"></textarea>
+
+            <div id="reject-reason-box" class="reject-reason-box" hidden>
+              <label for="reject-reason">Reason for rejection</label>
+              <input type="text" id="reject-reason" />
+            </div>
+
+            <div class="actions">
+              <button id="approve-btn" class="btn btn--primary">Approve</button>
+              <button id="approve-edits-btn" class="btn">Approve with Edits</button>
+              <button id="reject-btn" class="btn btn--danger">Reject</button>
+            </div>
+            <div id="decision-confirmation" class="confirmation" hidden>Decision recorded.</div>
+
+            <div id="annotated-body" class="annotated-body" hidden></div>
+          </section>
+
+          <section class="card reasoning-panel">
+            <h2>Reasoning Trail</h2>
+            <div id="reasoning-trail"></div>
+          </section>
+        </div>
+      </div>
+
+      <div id="load-error" class="card card--narrow" hidden></div>
+    </div>
   </main>
+  <script type="module">
+    import { renderLayout } from "./js/layout.js";
+    renderLayout({ active: "", title: "Run Detail" });
+  </script>
   <script type="module" src="js/run-view.js?v=2"></script>
 </body>
 </html>
