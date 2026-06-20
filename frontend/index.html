@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Zamp AI SDR — New Prospect</title>
+  <title>Zamp AI SDR — New Research</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
@@ -13,30 +13,37 @@
 <body>
   <div id="app-shell"></div>
   <main class="app-main">
-    <div class="content">
-      <div class="card card--narrow">
-        <h1>New Prospect</h1>
-        <p class="muted">Enter a prospect to research. We'll find a credible, source-backed reason to reach out.</p>
+    <div class="content content--centered">
+      <div class="card card--intake">
+        <div class="intake-eyebrow">Prospect intake</div>
+        <h1>Research a new prospect</h1>
+        <p class="muted">We scan public sources, extract signals, and draft only what we can ground.</p>
         <form id="intake-form">
-          <label for="name">Name</label>
+          <label for="name">Prospect name</label>
           <input type="text" id="name" name="name" required />
 
-          <label for="title">Title</label>
-          <input type="text" id="title" name="title" required />
+          <div class="form-row">
+            <div class="form-row__field">
+              <label for="title">Title</label>
+              <input type="text" id="title" name="title" required />
+            </div>
+            <div class="form-row__field">
+              <label for="company_name">Company</label>
+              <input type="text" id="company_name" name="company_name" required />
+            </div>
+          </div>
 
-          <label for="company_name">Company</label>
-          <input type="text" id="company_name" name="company_name" required />
-
-          <label for="fixture_id">Research source</label>
+          <label for="fixture_id">Research source <span class="label-optional">(optional)</span></label>
           <select id="fixture_id" name="fixture_id">
             <option value="">Live research (default)</option>
           </select>
 
           <div id="error-box" class="error-box" hidden></div>
 
-          <button type="submit" id="submit-button">Start Research</button>
+          <button type="submit" id="submit-button" class="btn btn--primary">Start Research</button>
         </form>
       </div>
+      <p class="intake-pipeline-hint">8-stage pipeline: Intake &rsaquo; Web Research &rsaquo; Signal Extract &rsaquo; Validate &rsaquo; Persona &rsaquo; Hook Score &rsaquo; Draft &rsaquo; QA</p>
     </div>
   </main>
   <script type="module">
