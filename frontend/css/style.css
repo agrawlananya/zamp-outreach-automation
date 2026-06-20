@@ -645,9 +645,51 @@ button[type="submit"] {
   color: var(--danger);
 }
 
+.banner--green {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.banner--neutral {
+  background: var(--neutral-bg);
+  color: var(--neutral);
+}
+
+.banner--green,
+.banner--neutral {
+  justify-content: space-between;
+}
+
+.banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.banner__title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.banner__subtext {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
 .retry-error {
   color: var(--danger);
   font-size: 13px;
+}
+
+/* ============================================================
+   Terminal-state pipeline recap (degraded/halted stage)
+   ============================================================ */
+.pipeline-recap-card {
+  margin-bottom: 20px;
+}
+
+.pipeline-recap-card[hidden] {
+  display: none;
 }
 
 /* ============================================================
@@ -675,6 +717,11 @@ button[type="submit"] {
 
 .draft-panel__eyebrow {
   margin: 0;
+}
+
+.draft-recipient {
+  margin: 0 0 14px;
+  font-size: 13px;
 }
 
 .draft-panel textarea {
@@ -721,6 +768,10 @@ button[type="submit"] {
   display: flex;
   gap: 10px;
   margin-top: 16px;
+}
+
+.actions[hidden] {
+  display: none;
 }
 
 .reject-reason-box {

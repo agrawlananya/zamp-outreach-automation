@@ -29,7 +29,9 @@ const PIPELINE_GROUPS = [
 const BANNER_CONFIG = {
   insufficient_signal: {
     className: "banner--yellow",
-    text: "Low confidence — fallback draft. Manual research recommended.",
+    text: (detail) =>
+      detail.escalation_reason ||
+      "Signal strength was too low to generate a confident draft. Manual research recommended.",
   },
   needs_human_research: {
     className: "banner--orange",
@@ -40,6 +42,15 @@ const BANNER_CONFIG = {
     text: (detail) => `Run failed — ${detail.escalation_reason || "unknown error"}. Use retry button.`,
   },
 };
+
+const REVIEW_ACTION_LABELS = {
+  approve: "Approved",
+  approve_with_edits: "Approved with Edits",
+  reject: "Rejected",
+};
+
+// Stages where a halted/degraded run still shows the pipeline recap (per audit_log).
+const DEGRADED_TERMINAL_STATUSES = new Set(["insufficient_signal", "needs_human_research", "failed"]);
 
 const POLL_INTERVAL_MS = 1500;
 const NON_TERMINAL_STATUSES = new Set(["pending", "running"]);
@@ -83,6 +94,16 @@ function formatLatency(ms) {
 function formatTimestamp(value) {
   if (!value) return "—";
   return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function formatDateTime(value) {
+  if (!value) return "—";
+  return new Date(value).toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function getInitials(name) {
@@ -226,8 +247,8 @@ function renderPipelineExpand(detail) {
   </div>`;
 }
 
-function renderPipeline(detail, status) {
-  const container = document.getElementById("pipeline-list");
+function renderPipeline(detail, status, containerId = "pipeline-list") {
+  const container = document.getElementById(containerId);
   if (!container) return;
 
   const auditByStage = latestAuditByStage(detail.audit_log);
@@ -270,6 +291,19 @@ function renderPipeline(detail, status) {
       ${expandHtml}
     </div>`;
   }).join("");
+}
+
+function renderPipelineRecap(detail) {
+  const card = document.getElementById("pipeline-recap-card");
+  if (!card) return;
+
+  if (!DEGRADED_TERMINAL_STATUSES.has(detail.status)) {
+    card.hidden = true;
+    return;
+  }
+
+  card.hidden = false;
+  renderPipeline(detail, { status: detail.status, current_stage: detail.current_stage }, "pipeline-recap-list");
 }
 
 function renderSignalsPanel(detail) {
@@ -323,8 +357,69 @@ function renderLogsPanel(detail) {
     .join("");
 }
 
+function copyDraftText(detail) {
+  if (!detail.draft) return "";
+  const body = detail.review_action && detail.review_action.edited_body ? detail.review_action.edited_body : detail.draft.body || "";
+  return `Subject: ${detail.draft.subject || ""}\n\n${body}`;
+}
+
+function wireCopyDraftButton(detail) {
+  const btn = document.getElementById("copy-draft-btn");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(copyDraftText(detail));
+      const original = btn.textContent;
+      btn.textContent = "Copied!";
+      setTimeout(() => {
+        btn.textContent = original;
+      }, 1500);
+    } catch (error) {
+      btn.textContent = "Copy failed";
+    }
+  });
+}
+
+function renderReviewedBanner(detail) {
+  const banner = document.getElementById("status-banner");
+  const action = detail.review_action ? detail.review_action.action : null;
+  const isApproval = action === "approve" || action === "approve_with_edits";
+
+  banner.hidden = false;
+  banner.className = `banner ${isApproval ? "banner--green" : "banner--neutral"}`;
+
+  const title = action === "reject" ? "Decision Recorded" : "Approval Confirmed";
+  const subtextParts = [REVIEW_ACTION_LABELS[action] || "Reviewed"];
+  if (detail.review_action && detail.review_action.reviewed_at) {
+    subtextParts.push(formatDateTime(detail.review_action.reviewed_at));
+  }
+  if (detail.review_action && detail.review_action.reason) {
+    subtextParts.push(`Reason: ${detail.review_action.reason}`);
+  }
+
+  const copyButtonHtml = detail.draft
+    ? `<button id="copy-draft-btn" class="btn btn--secondary btn--small">Copy draft</button>`
+    : "";
+
+  banner.innerHTML = `
+    <div class="banner__text">
+      <div class="banner__title">${escapeHtml(title)}</div>
+      <div class="banner__subtext">${escapeHtml(subtextParts.join(" · "))}</div>
+    </div>
+    ${copyButtonHtml}
+  `;
+
+  wireCopyDraftButton(detail);
+}
+
 function renderStatusBanner(detail) {
   const banner = document.getElementById("status-banner");
+
+  if (detail.status === "reviewed") {
+    renderReviewedBanner(detail);
+    return;
+  }
+
   const config = BANNER_CONFIG[detail.status];
 
   if (!config) {
@@ -394,12 +489,24 @@ function renderGroundednessPill(detail) {
 
 function renderDraftBody(detail, citationIndex) {
   const container = document.getElementById("draft-body-rendered");
-  const sentences = parseBodySentences(detail.draft);
 
   if (!detail.draft) {
     container.innerHTML = `<p>(No draft was generated for this run.)</p>`;
     return;
   }
+
+  // The approved text of record for "approve_with_edits" — draft.body is never mutated by
+  // the review endpoint, only review_actions.edited_body carries what was actually approved.
+  const editedBody = detail.status === "reviewed" && detail.review_action ? detail.review_action.edited_body : null;
+  if (editedBody) {
+    container.innerHTML = editedBody
+      .split(/\n{2,}/)
+      .map((p) => `<p>${escapeHtml(p)}</p>`)
+      .join("");
+    return;
+  }
+
+  const sentences = parseBodySentences(detail.draft);
 
   if (!sentences.length) {
     container.innerHTML = (detail.draft.body || "")
@@ -434,11 +541,20 @@ function renderDraftBody(detail, citationIndex) {
     .join("");
 }
 
+function renderDraftRecipient(detail) {
+  const el = document.getElementById("draft-recipient");
+  if (!el) return;
+  const parts = [detail.prospect_title, detail.company_name].filter(Boolean).join(", ");
+  el.textContent = detail.prospect_name ? `Recipient: ${detail.prospect_name}${parts ? ` · ${parts}` : ""}` : "";
+}
+
 function renderDraftPanel(detail, citationIndex) {
   const subjectInput = document.getElementById("draft-subject");
   const bodyTextarea = document.getElementById("draft-body");
   const bodyRendered = document.getElementById("draft-body-rendered");
-  const isLocked = detail.status === "reviewed" || !detail.draft;
+  const actionsRow = document.getElementById("draft-actions");
+  const isReviewed = detail.status === "reviewed";
+  const isLocked = isReviewed || !detail.draft;
 
   subjectInput.value = detail.draft ? detail.draft.subject || "" : "";
   bodyTextarea.value = detail.draft ? detail.draft.body || "" : "";
@@ -448,19 +564,15 @@ function renderDraftPanel(detail, citationIndex) {
   bodyTextarea.hidden = true;
   renderDraftBody(detail, citationIndex);
   renderGroundednessPill(detail);
+  renderDraftRecipient(detail);
 
+  actionsRow.hidden = isReviewed;
   document.getElementById("approve-btn").disabled = isLocked;
   document.getElementById("approve-edits-btn").disabled = isLocked;
   document.getElementById("reject-btn").disabled = isLocked;
   if (isLocked) {
     document.getElementById("approve-edits-btn").textContent = "Approve with Edits";
     document.getElementById("reject-btn").textContent = "Reject";
-  }
-
-  if (detail.status === "reviewed") {
-    const confirmation = document.getElementById("decision-confirmation");
-    confirmation.hidden = false;
-    confirmation.textContent = "Decision recorded.";
   }
 }
 
@@ -662,9 +774,8 @@ function wireActions(detail) {
     disableAll();
     try {
       await submitReview(detail.draft.id, payload);
-      confirmation.hidden = false;
-      confirmation.className = "confirmation";
-      confirmation.textContent = "Decision recorded.";
+      const updated = await getRunDetail(runId);
+      showReviewPhase(updated);
     } catch (error) {
       confirmation.hidden = false;
       confirmation.className = "confirmation confirmation--error";
@@ -707,6 +818,7 @@ function showReviewPhase(detail) {
 
   renderStatusBanner(detail);
   renderRoleConfirmationNote(detail);
+  renderPipelineRecap(detail);
   renderDraftPanel(detail, citationIndex);
   renderReasoningTrail(detail);
   renderFixtureBadge(detail);

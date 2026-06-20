@@ -22,6 +22,7 @@ from app.models.schemas import (
     DraftOut,
     PainMappingOut,
     PersonaMappingOut,
+    ReviewActionOut,
     RoleConfirmationOut,
     RunDetailResponse,
     RunListItem,
@@ -67,6 +68,14 @@ def get_run_detail(run_id: str, db: Session = Depends(get_db)):
     role_confirmation = db.query(RoleConfirmation).filter(RoleConfirmation.run_id == run_id).first()
     latest_draft = db.query(Draft).filter(Draft.run_id == run_id).order_by(Draft.version.desc()).first()
     audit_log = db.query(AuditLog).filter(AuditLog.run_id == run_id).order_by(AuditLog.created_at).all()
+    review_action = (
+        db.query(ReviewAction)
+        .filter(ReviewAction.draft_id == latest_draft.id)
+        .order_by(ReviewAction.reviewed_at.desc())
+        .first()
+        if latest_draft
+        else None
+    )
 
     return RunDetailResponse(
         id=run.id,
@@ -88,6 +97,7 @@ def get_run_detail(run_id: str, db: Session = Depends(get_db)):
         role_confirmation=RoleConfirmationOut.model_validate(role_confirmation) if role_confirmation else None,
         draft=DraftOut.model_validate(latest_draft) if latest_draft else None,
         audit_log=[AuditLogOut.model_validate(a) for a in audit_log],
+        review_action=ReviewActionOut.model_validate(review_action) if review_action else None,
     )
 
 

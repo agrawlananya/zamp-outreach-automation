@@ -135,6 +135,17 @@ class AuditLogOut(BaseModel):
     created_at: Optional[datetime] = None
 
 
+class ReviewActionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    draft_id: str
+    action: Optional[str] = None
+    edited_body: Optional[str] = None
+    reason: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
+
+
 class RunDetailResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -157,6 +168,7 @@ class RunDetailResponse(BaseModel):
     role_confirmation: Optional[RoleConfirmationOut] = None
     draft: Optional[DraftOut] = None
     audit_log: list[AuditLogOut] = []
+    review_action: Optional[ReviewActionOut] = None
 
 
 class ReviewRequest(BaseModel):

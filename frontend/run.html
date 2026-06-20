@@ -59,12 +59,17 @@
       <div id="review-phase" hidden>
         <div id="status-banner" class="banner" hidden></div>
         <div id="role-confirmation-note" class="muted" hidden></div>
+        <section id="pipeline-recap-card" class="card pipeline-recap-card" hidden>
+          <h2>Execution Pipeline</h2>
+          <div id="pipeline-recap-list"></div>
+        </section>
         <div class="review-layout">
           <section class="card draft-panel">
             <div class="draft-panel__header">
               <h3 class="draft-panel__eyebrow">Generated Draft</h3>
               <span id="groundedness-pill" class="badge" hidden></span>
             </div>
+            <div id="draft-recipient" class="draft-recipient muted"></div>
 
             <label for="draft-subject">Subject</label>
             <input type="text" id="draft-subject" />
@@ -78,12 +83,12 @@
               <input type="text" id="reject-reason" />
             </div>
 
-            <div class="actions">
+            <div class="actions" id="draft-actions">
               <button id="reject-btn" class="btn btn--danger">Reject</button>
               <button id="approve-edits-btn" class="btn btn--secondary">Approve with Edits</button>
               <button id="approve-btn" class="btn btn--success">Approve</button>
             </div>
-            <div id="decision-confirmation" class="confirmation" hidden>Decision recorded.</div>
+            <div id="decision-confirmation" class="confirmation" hidden></div>
           </section>
 
           <section class="card reasoning-panel">
@@ -100,6 +105,6 @@
     import { renderLayout } from "./js/layout.js";
     renderLayout({ active: "", title: "Run Detail" });
   </script>
-  <script type="module" src="js/run-view.js?v=4"></script>
+  <script type="module" src="js/run-view.js?v=5"></script>
 </body>
 </html>
