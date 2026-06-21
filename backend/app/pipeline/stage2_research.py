@@ -9,6 +9,17 @@ from app.services import scrape_service, search_service
 from app.services.concurrency import run_concurrently
 
 MAX_URLS_TO_SCRAPE = 12
+SOCIAL_DOMAINS = {"linkedin.com", "x.com"}
+BUSINESS_RESEARCH_DOMAINS = [
+    "crunchbase.com",
+    "bloomberg.com",
+    "forbes.com",
+    "fortune.com",
+    "reuters.com",
+    "wsj.com",
+    "pitchbook.com",
+    "techcrunch.com",
+]
 MAX_ROLE_CONFIRMATION_TEXT_LENGTH = 6000
 
 ROLE_CHANGE_PATTERN = re.compile(
@@ -70,13 +81,68 @@ def research_prospect(name: str, company_name: str) -> tuple[RawCorpus, RawCorpu
         if len(queued_results) >= MAX_URLS_TO_SCRAPE:
             break
 
-    scraped_pages = run_concurrently(lambda r: scrape_service.scrape(r["url"]), queued_results, max_workers=5)
+    # Any social URLs that slipped into the news queries also need Tavily content, not scraping.
+    social_queued = [r for r in queued_results if any(d in r["url"] for d in SOCIAL_DOMAINS)]
+    news_queued = [r for r in queued_results if r not in social_queued]
+
+    # Run LinkedIn, business databases, and news scraping concurrently — all independent.
+    [linkedin_results, business_results, scraped_pages] = run_concurrently(
+        lambda fn: fn(),
+        [
+            lambda: search_service.search(
+                query=f"{name} {company_name}",
+                max_results=3,
+                include_domains=["linkedin.com"],
+                include_raw_content=True,
+            ),
+            lambda: search_service.search(
+                query=f"{company_name} {name}",
+                max_results=5,
+                include_domains=BUSINESS_RESEARCH_DOMAINS,
+                include_raw_content=True,
+            ),
+            lambda: run_concurrently(lambda r: scrape_service.scrape(r["url"]), news_queued, max_workers=5),
+        ],
+        max_workers=3,
+    )
 
     company_items: list[CorpusItem] = []
     individual_items: list[CorpusItem] = []
     role_change_detected = None
 
-    for result, scraped in zip(queued_results, scraped_pages):
+    # LinkedIn + any other social results go straight into individual corpus via Tavily content.
+    for result in (*linkedin_results, *social_queued):
+        url = result["url"]
+        body = result["content"]
+        if not url or url in seen_urls or not body:
+            continue
+        seen_urls.add(url)
+        individual_items.append(CorpusItem(
+            url=url,
+            title=result["title"],
+            body_text=body,
+            published_date=result.get("published_date"),
+        ))
+
+    # Business database results: classify by whether the person's name appears in the content.
+    for result in business_results:
+        url = result["url"]
+        body = result["content"]
+        if not url or url in seen_urls or not body:
+            continue
+        seen_urls.add(url)
+        item = CorpusItem(
+            url=url,
+            title=result["title"],
+            body_text=body,
+            published_date=result.get("published_date"),
+        )
+        if name.lower() in body.lower():
+            individual_items.append(item)
+        else:
+            company_items.append(item)
+
+    for result, scraped in zip(news_queued, scraped_pages):
         body_lower = scraped["body_text"].lower()
 
         item = CorpusItem(

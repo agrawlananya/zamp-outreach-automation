@@ -123,14 +123,22 @@ def rank_candidate_signals(signals: list[Signal], limit: int = 8) -> list[Signal
     """Cheaply pre-rank validated signals on the four sub-scores that don't require
     pain-mapping (relevance is excluded — it can only be computed after pain-mapping
     has run), so expensive per-signal LLM work downstream only happens for the
-    signals with a real shot at being selected as the hook."""
+    signals with a real shot at being selected as the hook.
+
+    Weighted by the same relative importance compute_hook_score gives each sub-score
+    (renormalized over the four available here), so recency carries 2x the weight of
+    actionability/verifiability instead of being summed flat — otherwise a stale signal
+    that happens to be specific/actionable/verifiable can outrank a genuinely fresh one
+    and bump it out of the limit before it's ever scored."""
+    _NON_RELEVANCE_WEIGHT = 0.25 + 0.20 + 0.10 + 0.10  # specificity + recency + actionability + verifiability
+
     def candidate_score(signal: Signal) -> float:
         return (
-            _score_specificity(signal)
-            + _score_recency(signal)
-            + _score_actionability(signal)
-            + _score_verifiability(signal)
-        )
+            0.25 * _score_specificity(signal)
+            + 0.20 * _score_recency(signal)
+            + 0.10 * _score_actionability(signal)
+            + 0.10 * _score_verifiability(signal)
+        ) / _NON_RELEVANCE_WEIGHT
 
     return sorted(signals, key=candidate_score, reverse=True)[:limit]
 
