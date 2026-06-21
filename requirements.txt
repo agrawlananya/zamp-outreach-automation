@@ -1,1 +1,12 @@
--r backend/requirements.txt
+# Kept in sync with backend/requirements.txt — must be self-contained (not "-r backend/requirements.txt")
+# because Railpack installs deps from this file before the rest of the source tree is copied in.
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic-settings
+anthropic
+tavily-python
+requests
+beautifulsoup4
+python-dotenv
+aiofiles
