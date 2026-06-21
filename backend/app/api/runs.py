@@ -129,7 +129,7 @@ def list_runs(
     sort: str = Query(default="newest", pattern="^(newest|score|status)$"),
     db: Session = Depends(get_db),
 ):
-    query = db.query(Run)
+    query = db.query(Run).filter(Run.deleted_at.is_(None))
     if status:
         query = query.filter(Run.status == status)
 
@@ -209,3 +209,15 @@ def retry_run(run_id: str, background_tasks: BackgroundTasks, db: Session = Depe
     background_tasks.add_task(run_pipeline_in_background, new_run.id)
 
     return {"new_run_id": new_run.id}
+
+
+@router.delete("/api/runs/{run_id}")
+def delete_run(run_id: str, db: Session = Depends(get_db)):
+    run = db.query(Run).filter(Run.id == run_id).first()
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    run.deleted_at = datetime.utcnow()
+    db.commit()
+
+    return {"ok": True}

@@ -1,7 +1,7 @@
-import { getMetrics, getRuns } from "./api.js";
+import { getMetrics, getRuns, deleteRun } from "./api.js";
 
 const RECENT_RUNS_COUNT = 6;
-const COLUMNS = 5;
+const COLUMNS = 6;
 
 const metricsError = document.getElementById("metrics-error");
 const recentRunsError = document.getElementById("recent-runs-error");
@@ -114,6 +114,7 @@ function renderRecentRuns(items) {
         <td>${statusBadge(item)}</td>
         <td>${signalCell(item)}</td>
         <td>${confidenceCell(item)}</td>
+        <td><button type="button" class="btn btn--danger btn--small delete-run-btn" data-run-id="${item.id}">Delete</button></td>
       </tr>`
     )
     .join("");
@@ -121,6 +122,24 @@ function renderRecentRuns(items) {
   recentRunsBody.querySelectorAll("tr.clickable-row").forEach((row) => {
     row.addEventListener("click", () => {
       window.location.href = `run.html?id=${row.dataset.runId}`;
+    });
+  });
+
+  recentRunsBody.querySelectorAll(".delete-run-btn").forEach((btn) => {
+    btn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      if (!window.confirm("Delete this research run? This cannot be undone from the UI.")) {
+        return;
+      }
+      btn.disabled = true;
+      try {
+        await deleteRun(btn.dataset.runId);
+        await loadRecentRuns();
+      } catch (error) {
+        recentRunsError.hidden = false;
+        recentRunsError.textContent = `Could not delete run: ${error.message}`;
+        btn.disabled = false;
+      }
     });
   });
 }

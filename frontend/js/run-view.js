@@ -218,35 +218,6 @@ function latestAuditByStage(auditLog) {
   return map;
 }
 
-function renderPipelineExpand(detail) {
-  const persona = detail.persona_mapping;
-  if (!persona) return "";
-
-  const kpis = safeParseArray(persona.kpis);
-  const pains = safeParseArray(persona.pains);
-
-  return `<div class="pipeline-expand">
-    <h4>Matched Persona</h4>
-    <div class="pipeline-expand__row">
-      <strong>${escapeHtml(persona.persona_name || "—")}</strong>${persona.is_assumed ? ' <span class="tag">ASSUMED</span>' : ""}
-    </div>
-    ${
-      kpis.length
-        ? `<div class="pipeline-expand__row">KPIs<ul class="pipeline-expand__list">${kpis
-            .map((k) => `<li>${escapeHtml(k)}</li>`)
-            .join("")}</ul></div>`
-        : ""
-    }
-    ${
-      pains.length
-        ? `<div class="pipeline-expand__row">Pain Points<ul class="pipeline-expand__list">${pains
-            .map((p) => `<li>${escapeHtml(p)}</li>`)
-            .join("")}</ul></div>`
-        : ""
-    }
-  </div>`;
-}
-
 function renderPipeline(detail, status, containerId = "pipeline-list") {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -280,7 +251,6 @@ function renderPipeline(detail, status, containerId = "pipeline-list") {
     }
 
     const rowClass = `stage-row${isActive ? " stage-row--active" : ""}${stateClass === "queued" ? " stage-row--queued" : ""}`;
-    const expandHtml = isActive ? renderPipelineExpand(detail) : "";
 
     return `<div class="pipeline-group">
       <div class="${rowClass}">
@@ -288,7 +258,6 @@ function renderPipeline(detail, status, containerId = "pipeline-list") {
         <span class="stage-row__label">${escapeHtml(group.label)}</span>
         <span class="stage-row__meta">${escapeHtml(meta)}</span>
       </div>
-      ${expandHtml}
     </div>`;
   }).join("");
 }
@@ -481,6 +450,12 @@ function renderGroundednessPill(detail) {
     pill.hidden = true;
     return;
   }
+  if (detail.draft.groundedness_pass === false) {
+    pill.hidden = false;
+    pill.className = "badge badge--danger";
+    pill.textContent = "Groundedness check failed";
+    return;
+  }
   const { grounded, total, pct } = groundednessFromSentences(detail.draft);
   pill.hidden = false;
   pill.className = `badge ${total === 0 ? "badge--neutral" : pct >= 70 ? "badge--success" : pct >= 45 ? "badge--warning" : "badge--danger"}`;
@@ -522,7 +497,13 @@ function renderDraftBody(detail, citationIndex) {
     byParagraph.get(s.paragraph).push(s);
   });
 
-  container.innerHTML = [...byParagraph.keys()]
+  // body_sentences only carries the LLM-written core paragraphs — the greeting and sign-off
+  // are assembled deterministically server-side into draft.body, so pull them from there.
+  const bodyParagraphs = (detail.draft.body || "").split(/\n{2,}/);
+  const greeting = bodyParagraphs[0] || "";
+  const signoff = bodyParagraphs[bodyParagraphs.length - 1] || "";
+
+  const coreHtml = [...byParagraph.keys()]
     .sort((a, b) => a - b)
     .map((p) => {
       const inner = byParagraph
@@ -539,6 +520,9 @@ function renderDraftBody(detail, citationIndex) {
       return `<p>${inner}</p>`;
     })
     .join("");
+
+  container.innerHTML =
+    `<p>${escapeHtml(greeting)}</p>` + coreHtml + `<p>${escapeHtml(signoff).replace(/\n/g, "<br>")}</p>`;
 }
 
 function renderDraftRecipient(detail) {

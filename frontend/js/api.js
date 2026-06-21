@@ -49,6 +49,11 @@ export async function retryRun(runId) {
   return handleResponse(response);
 }
 
+export async function deleteRun(runId) {
+  const response = await fetch(`${API_BASE_URL}/api/runs/${runId}`, { method: "DELETE" });
+  return handleResponse(response);
+}
+
 export async function submitReview(draftId, data) {
   const response = await fetch(`${API_BASE_URL}/api/drafts/${draftId}/review`, {
     method: "PATCH",

@@ -14,17 +14,20 @@ ESCALATION_STATUSES = ("insufficient_signal", "needs_human_research")
 
 @router.get("/api/metrics", response_model=MetricsResponse)
 def get_metrics(db: Session = Depends(get_db)):
-    review_actions = db.query(ReviewAction).all()
+    review_actions = (
+        db.query(ReviewAction).join(Draft, Draft.id == ReviewAction.draft_id).join(Run, Run.id == Draft.run_id)
+        .filter(Run.deleted_at.is_(None)).all()
+    )
     total_reviewed = len(review_actions)
     accepted = sum(1 for r in review_actions if r.action != "reject")
     acceptance_rate = accepted / total_reviewed if total_reviewed else 0.0
 
-    drafts = db.query(Draft).all()
+    drafts = db.query(Draft).join(Run, Run.id == Draft.run_id).filter(Run.deleted_at.is_(None)).all()
     groundedness_drafts_pass = sum(1 for d in drafts if d.groundedness_pass)
     groundedness_drafts_total = len(drafts)
     groundedness_pct = groundedness_drafts_pass / groundedness_drafts_total if groundedness_drafts_total else 0.0
 
-    all_runs = db.query(Run).all()
+    all_runs = db.query(Run).filter(Run.deleted_at.is_(None)).all()
     completed_runs = [r for r in all_runs if r.status not in NON_TERMINAL_STATUSES]
     escalated_runs = [r for r in completed_runs if r.status in ESCALATION_STATUSES]
     escalation_rate = len(escalated_runs) / len(completed_runs) if completed_runs else 0.0

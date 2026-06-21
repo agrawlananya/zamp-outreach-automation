@@ -37,6 +37,7 @@ class Run(Base):
     time_to_draft_ms = Column(Integer)
     escalation_reason = Column(Text)
     fixture_id = Column(String)
+    deleted_at = Column(DateTime)
 
 
 class Signal(Base):

@@ -14,7 +14,6 @@
   <div id="app-shell"></div>
   <main class="app-main">
     <div class="content">
-      <h1>Run List</h1>
       <p class="muted">Every research run, scored and ready to triage.</p>
 
       <div id="load-error" class="banner banner--red" hidden></div>
@@ -64,18 +63,11 @@
             <th>Groundedness</th>
             <th>Depth</th>
             <th>Updated</th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="run-list-body"></tbody>
       </table>
-
-      <div class="pagination">
-        <span class="pagination__info" id="pagination-info"></span>
-        <div class="pagination__controls">
-          <button type="button" id="prev-page-btn" class="btn btn--secondary btn--small">Previous</button>
-          <button type="button" id="next-page-btn" class="btn btn--secondary btn--small">Next</button>
-        </div>
-      </div>
     </div>
   </main>
   <script type="module">

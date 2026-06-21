@@ -1,4 +1,4 @@
-import { getRuns } from "./api.js";
+import { getRuns, deleteRun } from "./api.js";
 
 const PER_PAGE = 20;
 
@@ -8,15 +8,14 @@ const searchInput = document.getElementById("search-input");
 const statusFilter = document.getElementById("status-filter");
 const sortSelect = document.getElementById("sort-select");
 const exportBtn = document.getElementById("export-btn");
-const prevPageBtn = document.getElementById("prev-page-btn");
-const nextPageBtn = document.getElementById("next-page-btn");
-const paginationInfo = document.getElementById("pagination-info");
 
-const COLUMNS = 8;
+const COLUMNS = 9;
+const SCROLL_THRESHOLD_PX = 200;
 
 let currentItems = [];
 let total = 0;
 let page = 1;
+let isLoadingMore = false;
 
 function escapeHtml(value) {
   const div = document.createElement("div");
@@ -153,6 +152,7 @@ function renderTable() {
         <td>${groundednessCell(item)}</td>
         <td>${item.personalization_depth ?? "—"}</td>
         <td>${escapeHtml(formatRelativeTime(item.created_at))}</td>
+        <td><button type="button" class="btn btn--danger btn--small delete-run-btn" data-run-id="${item.id}">Delete</button></td>
       </tr>`;
     })
     .join("");
@@ -162,18 +162,36 @@ function renderTable() {
       window.location.href = `run.html?id=${row.dataset.runId}`;
     });
   });
+
+  tableBody.querySelectorAll(".delete-run-btn").forEach((btn) => {
+    btn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      if (!window.confirm("Delete this research run? This cannot be undone from the UI.")) {
+        return;
+      }
+      btn.disabled = true;
+      try {
+        await deleteRun(btn.dataset.runId);
+        await loadRuns();
+      } catch (error) {
+        loadError.hidden = false;
+        loadError.textContent = `Could not delete run: ${error.message}`;
+        btn.disabled = false;
+      }
+    });
+  });
 }
 
-function renderPagination() {
-  const start = total === 0 ? 0 : (page - 1) * PER_PAGE + 1;
-  const end = Math.min(page * PER_PAGE, total);
-  paginationInfo.textContent = total === 0 ? "0 runs" : `Showing ${start}–${end} of ${total} runs`;
-  prevPageBtn.disabled = page <= 1;
-  nextPageBtn.disabled = end >= total;
+function hasMoreToLoad() {
+  return currentItems.length < total;
 }
 
-async function loadRuns() {
-  tableBody.innerHTML = `<tr class="table-loading-row"><td colspan="${COLUMNS}">Loading runs…</td></tr>`;
+async function loadRuns({ reset = false } = {}) {
+  if (reset) {
+    page = 1;
+    currentItems = [];
+    tableBody.innerHTML = `<tr class="table-loading-row"><td colspan="${COLUMNS}">Loading runs…</td></tr>`;
+  }
   loadError.hidden = true;
 
   const params = { page, per_page: PER_PAGE, sort: sortSelect.value };
@@ -183,16 +201,30 @@ async function loadRuns() {
 
   try {
     const result = await getRuns(params);
-    currentItems = result.items;
+    currentItems = reset ? result.items : currentItems.concat(result.items);
     total = result.total;
-    page = result.page;
     renderTable();
-    renderPagination();
   } catch (error) {
     loadError.hidden = false;
     loadError.textContent = `Could not load runs: ${error.message}`;
-    tableBody.innerHTML = "";
-    paginationInfo.textContent = "";
+    if (reset) {
+      tableBody.innerHTML = "";
+    }
+  }
+}
+
+async function loadMoreOnScroll() {
+  if (isLoadingMore || !hasMoreToLoad()) return;
+  const nearBottom =
+    window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - SCROLL_THRESHOLD_PX;
+  if (!nearBottom) return;
+
+  isLoadingMore = true;
+  page += 1;
+  try {
+    await loadRuns({ reset: false });
+  } finally {
+    isLoadingMore = false;
   }
 }
 
@@ -240,26 +272,9 @@ function exportCsv() {
 }
 
 searchInput.addEventListener("input", renderTable);
-statusFilter.addEventListener("change", () => {
-  page = 1;
-  loadRuns();
-});
-sortSelect.addEventListener("change", () => {
-  page = 1;
-  loadRuns();
-});
+statusFilter.addEventListener("change", () => loadRuns({ reset: true }));
+sortSelect.addEventListener("change", () => loadRuns({ reset: true }));
 exportBtn.addEventListener("click", exportCsv);
-prevPageBtn.addEventListener("click", () => {
-  if (page > 1) {
-    page -= 1;
-    loadRuns();
-  }
-});
-nextPageBtn.addEventListener("click", () => {
-  if (page * PER_PAGE < total) {
-    page += 1;
-    loadRuns();
-  }
-});
+window.addEventListener("scroll", loadMoreOnScroll);
 
-loadRuns();
+loadRuns({ reset: true });
