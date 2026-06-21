@@ -4,7 +4,6 @@ watchPatterns = ["backend/**"]
 
 [deploy]
 startCommand = "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
-preDeployCommand = "cd backend && python -m app.db.init_db"
 healthcheckPath = "/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
