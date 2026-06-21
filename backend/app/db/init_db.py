@@ -8,6 +8,8 @@ def _ensure_deleted_at_column():
     # create_all() doesn't alter existing tables, so a pre-existing runs table needs
     # this column added by hand when upgrading from an older schema.
     inspector = inspect(engine)
+    if not inspector.has_table("runs"):
+        return
     columns = [c["name"] for c in inspector.get_columns("runs")]
     if "deleted_at" not in columns:
         with engine.begin() as conn:
