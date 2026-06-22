@@ -669,9 +669,9 @@ function renderHookScoringCollapsible(detail) {
           <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
             <span style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted); text-transform:uppercase;">HOOK</span>
             ${renderScoreBar(finalScore)}
-            ${s.adjusted_hook_score !== null && s.adjusted_hook_score !== undefined && s.adjusted_hook_score !== s.hook_score ? `<span class="score-adjusted" style="margin-left: 8px;">raw ${hookScoreText(s)}</span>` : ""}
           </div>
         </div>
+        ${s.adjusted_hook_score !== null && s.adjusted_hook_score !== undefined && s.adjusted_hook_score !== s.hook_score ? `<p class="hook-candidate__adjustment score-adjusted">raw ${hookScoreText(s)}</p>` : ""}
         <div class="hook-candidate__axes">
           <span class="score-tag"><span class="score-tag__label">REL</span><span class="score-tag__value">${formatScore(s.relevance_score)}</span></span>
           <span class="score-tag"><span class="score-tag__label">SPEC</span><span class="score-tag__value">${formatScore(s.specificity_score)}</span></span>

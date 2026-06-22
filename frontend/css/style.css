@@ -1071,6 +1071,10 @@ button[type="submit"] {
   color: var(--text-secondary);
 }
 
+.hook-candidate__adjustment {
+  margin: 0 0 8px;
+}
+
 .hook-candidate__axes {
   display: flex;
   flex-wrap: wrap;
