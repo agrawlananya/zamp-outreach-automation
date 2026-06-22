@@ -1212,6 +1212,26 @@ button[type="submit"] {
   margin-left: 6px;
 }
 
+.tag--positive {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.tag--neutral {
+  background: var(--neutral-bg);
+  color: var(--neutral);
+}
+
+.tag--soft_negative {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.tag--sensitive {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
 .score-adjusted {
   color: var(--text-secondary);
   font-size: 12px;

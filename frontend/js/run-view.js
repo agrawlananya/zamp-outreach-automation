@@ -159,6 +159,11 @@ function hookScoreText(s) {
   return `${raw} &rarr; ${formatScore(s.adjusted_hook_score)}${pct > 0 ? `<span class="score-adjusted"> (saturation -${pct}%)</span>` : ""}`;
 }
 
+function valenceTag(valence) {
+  if (!valence) return "";
+  return `<span class="tag tag--${escapeHtml(valence)}">${escapeHtml(valence)}</span>`;
+}
+
 function candidateFlag(s) {
   if (s.valence === "sensitive") {
     return { cls: "suppressed", label: "Suppressed — sensitive" };
@@ -660,6 +665,7 @@ function renderHookScoringCollapsible(detail) {
         <p class="hook-candidate__claim">${escapeHtml(s.claim)}</p>
         <div class="hook-candidate__meta">
           <span class="hook-candidate__flag hook-candidate__flag--${flag.cls}">${flag.label}</span>
+          ${valenceTag(s.valence)}
           <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
             <span style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted); text-transform:uppercase;">HOOK</span>
             ${renderScoreBar(finalScore)}
