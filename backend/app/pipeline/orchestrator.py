@@ -197,7 +197,7 @@ class PipelineOrchestrator:
         # Stage 5 — validate signals (continuable)
         validated_signals, ok = self._execute_stage(
             db, run, "stage5_validate_signals", "verifier", {"signal_count": len(fact_signals)},
-            lambda: stage5_validate_signals.validate_signals(fact_signals, run_id, db),
+            lambda: stage5_validate_signals.validate_signals(fact_signals, normalized, run_id, db),
             output_snapshot_fn=lambda r: {"validated_count": len(r)},
             continuable=True,
             fallback=[],
