@@ -20,6 +20,7 @@ body {
   bottom: 0;
   width: var(--sidebar-width);
   background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
   display: flex;
   flex-direction: column;
   padding: var(--space-lg) var(--space-md);
@@ -84,7 +85,8 @@ body {
 }
 
 .sidebar__primary-action-icon {
-  display: none;
+  font-size: 16px;
+  display: flex;
 }
 
 .sidebar__section-label {
@@ -126,7 +128,56 @@ body {
 }
 
 .sidebar-nav-item__icon {
-  display: none;
+  font-size: 16px;
+  display: flex;
+}
+
+.sidebar__footer {
+  margin-top: auto;
+  padding-top: var(--space-lg);
+}
+
+.theme-toggle {
+  display: flex;
+  gap: var(--space-xs);
+  padding: var(--space-xs);
+  background: var(--sidebar-active-bg);
+  border-radius: var(--radius-md);
+}
+
+.theme-toggle__btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--sidebar-text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.theme-toggle__btn:hover {
+  color: var(--sidebar-text-active);
+}
+
+.theme-toggle__btn--active {
+  background: var(--color-accent);
+  color: var(--color-paper);
+}
+
+.theme-toggle__btn--active:hover {
+  color: var(--color-paper);
+}
+
+.theme-toggle__icon {
+  font-size: 13px;
+  line-height: 1;
 }
 
 .topbar {
@@ -173,8 +224,17 @@ body {
   .sidebar__eyebrow,
   .sidebar__primary-action-label,
   .sidebar__section-label,
-  .sidebar-nav-item__label {
+  .sidebar-nav-item__label,
+  .theme-toggle__label {
     display: none;
+  }
+
+  .theme-toggle {
+    flex-direction: column;
+  }
+
+  .theme-toggle__btn {
+    padding: 8px;
   }
 
   .sidebar__primary-action-icon,
@@ -327,6 +387,16 @@ textarea:focus,
 select:focus {
   outline: none;
   border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 28%, transparent);
+}
+
+.btn:focus-visible,
+.theme-toggle__btn:focus-visible,
+.sidebar-nav-item:focus-visible,
+.sidebar__primary-action:focus-visible,
+.clickable-row:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 textarea {
@@ -498,7 +568,23 @@ button[type="submit"] {
 }
 
 .pipeline-group {
+  position: relative;
   border-bottom: 1px solid var(--color-border);
+}
+
+.pipeline-group::before {
+  content: "";
+  position: absolute;
+  left: 17px;
+  top: 24px;
+  height: 100%;
+  width: 2px;
+  background: var(--color-border);
+  z-index: 0;
+}
+
+.pipeline-group:last-child::before {
+  display: none;
 }
 
 .pipeline-group:last-child {
@@ -529,6 +615,8 @@ button[type="submit"] {
   font-size: 10px;
   line-height: 1;
   color: var(--color-paper);
+  position: relative;
+  z-index: 1;
 }
 
 .stage-row__icon--done {
@@ -813,61 +901,89 @@ button[type="submit"] {
    Hook Scoring — candidate list
    ============================================================ */
 .hook-candidate {
-  padding: 12px 0;
-  border-bottom: 1px solid var(--color-border);
-  border-left: 2px solid transparent;
-  padding-left: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
 }
 
 .hook-candidate:last-child {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .hook-candidate--selected {
-  border-left-color: var(--success);
+  border-color: var(--success);
   background: var(--success-bg);
 }
 
 .hook-candidate__claim {
   font-size: 14px;
-  margin: 0 0 8px;
+  font-weight: 500;
+  margin: 0 0 12px;
+  line-height: 1.5;
 }
 
 .hook-candidate__meta {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
-  margin-bottom: 6px;
+  margin-bottom: 12px;
 }
 
 .hook-candidate__flag {
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .hook-candidate__flag--selected {
-  color: var(--success);
+  background: var(--success);
+  color: var(--color-paper);
 }
 
 .hook-candidate__flag--low-recency {
-  color: var(--warning);
+  background: var(--warning);
+  color: var(--color-paper);
 }
 
 .hook-candidate__flag--suppressed {
-  color: var(--danger);
+  background: var(--danger);
+  color: var(--color-paper);
 }
 
 .hook-candidate__flag--considered {
+  background: var(--neutral-bg);
   color: var(--text-secondary);
 }
 
 .hook-candidate__axes {
   display: flex;
-  gap: var(--space-md);
-  font-size: 12px;
-  color: var(--text-secondary);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.score-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--neutral-bg);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
   font-family: var(--font-mono);
+}
+.score-tag__label {
+  color: var(--text-muted);
+}
+.score-tag__value {
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 /* ============================================================
@@ -906,11 +1022,35 @@ button[type="submit"] {
 .trail-collapsible summary {
   cursor: pointer;
   padding: 12px 0;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text-secondary);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+}
+
+.trail-collapsible summary::-webkit-details-marker {
+  display: none;
+}
+
+.trail-collapsible summary::after {
+  content: "";
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.2s;
+  color: var(--text-muted);
+}
+
+.trail-collapsible[open] summary::after {
+  transform: translateY(2px) rotate(-135deg);
 }
 
 .trail-collapsible[open] summary {
@@ -1009,13 +1149,14 @@ button[type="submit"] {
 
 .score-bar__track {
   width: 64px;
-  height: 4px;
+  height: 6px;
   border-radius: var(--radius-full);
   background: var(--color-raised);
   overflow: hidden;
 }
 
 .score-bar__fill {
+  display: block;
   height: 100%;
   border-radius: var(--radius-full);
 }
@@ -1034,7 +1175,13 @@ button[type="submit"] {
 
 .score-bar__value {
   font-size: 13px;
-  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.hook-candidate--selected .score-bar__value {
+  color: var(--success);
 }
 
 /* ============================================================
