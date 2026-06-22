@@ -1,22 +1,11 @@
-import { getMetrics, getRuns } from "./api.js";
+import { getMetrics, getRuns, deleteRun } from "./api.js";
 
-const STATUS_BADGE_CLASS = {
-  pending: "badge badge--pending",
-  running: "badge badge--running",
-  ready_for_review: "badge badge--ready",
-  insufficient_signal: "badge badge--insufficient",
-  needs_human_research: "badge badge--needs-research",
-  deprioritized: "badge badge--deprioritized",
-  failed: "badge badge--failed",
-  reviewed: "badge badge--reviewed",
-};
+const RECENT_RUNS_COUNT = 6;
+const COLUMNS = 6;
 
-const statusFilter = document.getElementById("status-filter");
-const tableBody = document.getElementById("runs-table-body");
-
-let currentRuns = [];
-let sortKey = "created_at";
-let sortAsc = false;
+const metricsError = document.getElementById("metrics-error");
+const recentRunsError = document.getElementById("recent-runs-error");
+const recentRunsBody = document.getElementById("recent-runs-body");
 
 function escapeHtml(value) {
   const div = document.createElement("div");
@@ -28,75 +17,153 @@ function formatPercent(value) {
   return `${Math.round((value || 0) * 100)}%`;
 }
 
+function statusBadge(item) {
+  const status = item.status;
+  let label = (status || "").replace(/_/g, " ").toUpperCase();
+  let cls = "badge--neutral";
+  let dot = "";
+
+  switch (status) {
+    case "ready_for_review":
+      label = "READY";
+      cls = "badge--success";
+      break;
+    case "running":
+      label = "RUNNING";
+      cls = "badge--info";
+      dot = '<span class="badge__dot"></span>';
+      break;
+    case "insufficient_signal":
+      label = "INSUFFICIENT SIGNAL";
+      cls = "badge--warning";
+      break;
+    case "needs_human_research":
+      label = "NEEDS RESEARCH";
+      cls = "badge--warning";
+      break;
+    case "failed":
+      label = "FAILED";
+      cls = "badge--danger";
+      break;
+    case "deprioritized":
+      label = "DEPRIORITIZED";
+      cls = "badge--neutral";
+      break;
+    case "pending":
+      label = "PENDING";
+      cls = "badge--neutral";
+      break;
+    case "reviewed":
+      if (item.human_decision === "approve" || item.human_decision === "approve_with_edits") {
+        label = "APPROVED";
+        cls = "badge--success";
+      } else if (item.human_decision === "reject") {
+        label = "REJECTED";
+        cls = "badge--danger";
+      } else {
+        label = "REVIEWED";
+        cls = "badge--neutral";
+      }
+      break;
+  }
+
+  return `<span class="badge ${cls}">${dot}${escapeHtml(label)}</span>`;
+}
+
 function renderMetrics(metrics) {
   document.getElementById("metric-acceptance").textContent = formatPercent(metrics.acceptance_rate);
   document.getElementById("metric-groundedness").textContent = formatPercent(metrics.groundedness_pct);
   document.getElementById("metric-escalation").textContent = formatPercent(metrics.escalation_rate);
   document.getElementById("metric-time").textContent =
-    metrics.avg_time_to_draft_ms != null ? `${Math.round(metrics.avg_time_to_draft_ms)} ms` : "—";
-  document.getElementById("metric-depth").textContent = (metrics.avg_personalization_depth || 0).toFixed(2);
+    metrics.avg_time_to_draft_ms != null ? `${(metrics.avg_time_to_draft_ms / 1000).toFixed(1)}s` : "—";
+  document.getElementById("metric-depth").textContent =
+    metrics.avg_personalization_depth != null ? `${metrics.avg_personalization_depth.toFixed(1)}/2` : "—";
+
+  document.getElementById("metric-acceptance-sub").textContent =
+    metrics.reviewed_count != null ? `${metrics.accepted_count} of ${metrics.reviewed_count} reviewed` : "";
+  document.getElementById("metric-groundedness-sub").textContent =
+    metrics.groundedness_drafts_total != null
+      ? `${metrics.groundedness_drafts_pass}/${metrics.groundedness_drafts_total} drafts grounded`
+      : "";
+  document.getElementById("metric-escalation-sub").textContent =
+    metrics.completed_count != null ? `${metrics.escalated_count} of ${metrics.completed_count} runs` : "";
 }
 
-function renderTable() {
-  const rows = [...currentRuns].sort((a, b) => {
-    const av = a[sortKey];
-    const bv = b[sortKey];
-    if (av === null || av === undefined) return 1;
-    if (bv === null || bv === undefined) return -1;
-    if (av < bv) return sortAsc ? -1 : 1;
-    if (av > bv) return sortAsc ? 1 : -1;
-    return 0;
-  });
+function signalCell(item) {
+  if (!item.signal_type) return '<span class="muted">—</span>';
+  const domain = item.signal_source_domain ? ` · ${escapeHtml(item.signal_source_domain)}` : "";
+  return `${escapeHtml(item.signal_type)}${domain}`;
+}
 
-  tableBody.innerHTML = rows
-    .map((run) => {
-      const badgeClass = STATUS_BADGE_CLASS[run.status] || "badge";
-      const date = run.created_at ? new Date(run.created_at).toLocaleString() : "—";
-      const hookScore = run.top_hook_score == null ? "—" : Number(run.top_hook_score).toFixed(2);
-      const timeToDraft = run.time_to_draft_ms == null ? "—" : `${run.time_to_draft_ms} ms`;
-      return `<tr data-run-id="${run.id}" class="clickable-row">
-        <td>${escapeHtml(run.prospect_name || "—")}</td>
-        <td>${escapeHtml(run.company || "—")}</td>
-        <td><span class="${badgeClass}">${escapeHtml(run.status)}</span></td>
-        <td>${hookScore}</td>
-        <td>${timeToDraft}</td>
-        <td>${escapeHtml(run.human_decision || "—")}</td>
-        <td>${escapeHtml(date)}</td>
-      </tr>`;
-    })
+function confidenceCell(item) {
+  if (item.top_hook_score == null) return '<span class="muted">—</span>';
+  return `${Math.round(item.top_hook_score * 100)}%`;
+}
+
+function renderRecentRuns(items) {
+  if (!items.length) {
+    recentRunsBody.innerHTML = `<tr class="table-empty-row"><td colspan="${COLUMNS}">No runs yet.</td></tr>`;
+    return;
+  }
+
+  recentRunsBody.innerHTML = items
+    .map(
+      (item) => `<tr data-run-id="${item.id}" class="clickable-row">
+        <td>${escapeHtml(item.prospect_name || "—")}</td>
+        <td>${escapeHtml(item.company || "—")}</td>
+        <td>${statusBadge(item)}</td>
+        <td>${signalCell(item)}</td>
+        <td>${confidenceCell(item)}</td>
+        <td><button type="button" class="btn btn--danger btn--small delete-run-btn" data-run-id="${item.id}">Delete</button></td>
+      </tr>`
+    )
     .join("");
 
-  tableBody.querySelectorAll("tr.clickable-row").forEach((row) => {
+  recentRunsBody.querySelectorAll("tr.clickable-row").forEach((row) => {
     row.addEventListener("click", () => {
       window.location.href = `run.html?id=${row.dataset.runId}`;
     });
   });
-}
 
-document.querySelectorAll("#runs-table th[data-sort]").forEach((th) => {
-  th.addEventListener("click", () => {
-    const key = th.dataset.sort;
-    sortAsc = sortKey === key ? !sortAsc : true;
-    sortKey = key;
-    renderTable();
+  recentRunsBody.querySelectorAll(".delete-run-btn").forEach((btn) => {
+    btn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      if (!window.confirm("Delete this research run? This cannot be undone from the UI.")) {
+        return;
+      }
+      btn.disabled = true;
+      try {
+        await deleteRun(btn.dataset.runId);
+        await loadRecentRuns();
+      } catch (error) {
+        recentRunsError.hidden = false;
+        recentRunsError.textContent = `Could not delete run: ${error.message}`;
+        btn.disabled = false;
+      }
+    });
   });
-});
+}
 
-async function loadRuns() {
-  const params = { page: 1, per_page: 20 };
-  if (statusFilter.value) {
-    params.status = statusFilter.value;
+async function loadMetrics() {
+  try {
+    const metrics = await getMetrics();
+    renderMetrics(metrics);
+  } catch (error) {
+    metricsError.hidden = false;
+    metricsError.textContent = `Could not load metrics: ${error.message}`;
   }
-  const result = await getRuns(params);
-  currentRuns = result.items;
-  renderTable();
 }
 
-statusFilter.addEventListener("change", loadRuns);
-
-async function init() {
-  const [metrics] = await Promise.all([getMetrics(), loadRuns()]);
-  renderMetrics(metrics);
+async function loadRecentRuns() {
+  try {
+    const result = await getRuns({ per_page: RECENT_RUNS_COUNT });
+    renderRecentRuns(result.items);
+  } catch (error) {
+    recentRunsError.hidden = false;
+    recentRunsError.textContent = `Could not load recent runs: ${error.message}`;
+    recentRunsBody.innerHTML = "";
+  }
 }
 
-init();
+loadMetrics();
+loadRecentRuns();
