@@ -165,9 +165,6 @@ function valenceTag(valence) {
 }
 
 function candidateFlag(s) {
-  if (s.valence === "sensitive") {
-    return { cls: "suppressed", label: "Suppressed — sensitive" };
-  }
   if (s.selected_as_hook) {
     return { cls: "selected", label: "&#10003; Selected" };
   }
