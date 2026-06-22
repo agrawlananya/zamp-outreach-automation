@@ -78,7 +78,9 @@
           <section class="card draft-panel">
             <div class="draft-panel__header">
               <h3 class="draft-panel__eyebrow">Generated Draft</h3>
-              <span id="groundedness-pill" class="badge" hidden></span>
+              <button type="button" id="copy-draft-header" class="icon-btn" title="Copy draft" aria-label="Copy draft">
+                <i class="ph ph-copy"></i>
+              </button>
             </div>
             <div id="draft-recipient" class="draft-recipient muted"></div>
 
@@ -103,7 +105,8 @@
           </section>
 
           <section class="card reasoning-panel">
-            <h2>Reasoning Trail</h2>
+            <div id="groundedness-meter" class="groundedness-meter" hidden></div>
+            <h2 class="reasoning-panel__heading">Reasoning Trail</h2>
             <div id="reasoning-trail"></div>
           </section>
         </div>

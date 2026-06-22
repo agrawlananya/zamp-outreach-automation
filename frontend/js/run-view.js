@@ -332,19 +332,31 @@ function copyDraftText(detail) {
   return `Subject: ${detail.draft.subject || ""}\n\n${body}`;
 }
 
-function wireCopyDraftButton(detail) {
-  const btn = document.getElementById("copy-draft-btn");
+function wireCopyButton(btnId, detail) {
+  const btn = document.getElementById(btnId);
   if (!btn) return;
+  // Icon buttons flash a title/tooltip; text buttons swap their label.
+  const isIcon = btn.classList.contains("icon-btn");
   btn.addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(copyDraftText(detail));
-      const original = btn.textContent;
-      btn.textContent = "Copied!";
-      setTimeout(() => {
-        btn.textContent = original;
-      }, 1500);
+      if (isIcon) {
+        btn.classList.add("icon-btn--copied");
+        const originalTitle = btn.title;
+        btn.title = "Copied!";
+        setTimeout(() => {
+          btn.classList.remove("icon-btn--copied");
+          btn.title = originalTitle;
+        }, 1500);
+      } else {
+        const original = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(() => {
+          btn.textContent = original;
+        }, 1500);
+      }
     } catch (error) {
-      btn.textContent = "Copy failed";
+      if (!isIcon) btn.textContent = "Copy failed";
     }
   });
 }
@@ -378,7 +390,7 @@ function renderReviewedBanner(detail) {
     ${copyButtonHtml}
   `;
 
-  wireCopyDraftButton(detail);
+  wireCopyButton("copy-draft-btn", detail);
 }
 
 function renderStatusBanner(detail) {
@@ -444,22 +456,55 @@ function groundednessFromSentences(draft) {
   return { grounded, total, pct };
 }
 
-function renderGroundednessPill(detail) {
-  const pill = document.getElementById("groundedness-pill");
+function groundednessTier(pct, failed) {
+  if (failed || pct < 45) return "low";
+  return pct < 70 ? "mid" : "high";
+}
+
+function renderGroundednessMeter(detail) {
+  const meter = document.getElementById("groundedness-meter");
+  if (!meter) return;
+
   if (!detail.draft) {
-    pill.hidden = true;
+    meter.hidden = true;
+    meter.innerHTML = "";
     return;
   }
-  if (detail.draft.groundedness_pass === false) {
-    pill.hidden = false;
-    pill.className = "badge badge--danger";
-    pill.textContent = "Groundedness check failed";
-    return;
-  }
+
+  const failed = detail.draft.groundedness_pass === false;
   const { grounded, total, pct } = groundednessFromSentences(detail.draft);
-  pill.hidden = false;
-  pill.className = `badge ${total === 0 ? "badge--neutral" : pct >= 70 ? "badge--success" : pct >= 45 ? "badge--warning" : "badge--danger"}`;
-  pill.textContent = total === 0 ? "No factual claims" : `${grounded}/${total} grounded · ${pct}%`;
+  const tier = groundednessTier(pct, failed);
+
+  const segments =
+    total > 0
+      ? Array.from(
+          { length: total },
+          (_, i) =>
+            `<span class="groundedness-meter__seg groundedness-meter__seg--${i < grounded ? "fill" : "empty"}"></span>`
+        ).join("")
+      : `<span class="groundedness-meter__seg groundedness-meter__seg--empty"></span>`;
+
+  let caption;
+  if (failed) {
+    caption = total
+      ? `Groundedness check failed — ${grounded} of ${total} claims traced.`
+      : "Groundedness check failed. Review carefully before sending.";
+  } else if (total === 0) {
+    caption = "No factual claims to trace.";
+  } else {
+    caption = `All ${grounded} of ${total} claims traced to a verified source.`;
+  }
+
+  meter.hidden = false;
+  meter.className = `groundedness-meter groundedness-meter--${tier}`;
+  meter.innerHTML = `
+    <div class="groundedness-meter__top">
+      <span class="groundedness-meter__label">Groundedness</span>
+      <span class="groundedness-meter__pct">${total === 0 ? "—" : `${pct}%`}</span>
+    </div>
+    <div class="groundedness-meter__bars">${segments}</div>
+    <p class="groundedness-meter__caption">${escapeHtml(caption)}</p>
+  `;
 }
 
 function renderDraftBody(detail, citationIndex) {
@@ -547,7 +592,6 @@ function renderDraftPanel(detail, citationIndex) {
   bodyRendered.hidden = false;
   bodyTextarea.hidden = true;
   renderDraftBody(detail, citationIndex);
-  renderGroundednessPill(detail);
   renderDraftRecipient(detail);
 
   actionsRow.hidden = isReviewed;
@@ -817,9 +861,11 @@ function showReviewPhase(detail) {
   renderRoleConfirmationNote(detail);
   renderPipelineRecap(detail);
   renderDraftPanel(detail, citationIndex);
+  renderGroundednessMeter(detail);
   renderReasoningTrail(detail);
   renderFixtureBadge(detail);
   wireActions(detail);
+  wireCopyButton("copy-draft-header", detail);
 }
 
 async function pollStatus() {

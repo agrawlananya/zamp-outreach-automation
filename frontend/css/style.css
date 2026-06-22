@@ -803,8 +803,117 @@ button[type="submit"] {
   margin-bottom: var(--space-sm);
 }
 
-.draft-panel__eyebrow {
+.draft-panel__eyebrow,
+.reasoning-panel__heading {
   margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.reasoning-panel__heading {
+  margin: 0 0 var(--space-md);
+}
+
+/* Draft-header copy action */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 15px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.icon-btn:hover {
+  background: var(--neutral-bg);
+  color: var(--text-primary);
+}
+
+.icon-btn--copied {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+/* ============================================================
+   Groundedness meter (heads the reasoning trail column)
+   ============================================================ */
+.groundedness-meter {
+  padding-bottom: var(--space-md);
+  margin-bottom: var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.groundedness-meter[hidden] {
+  display: none;
+}
+
+.groundedness-meter__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.groundedness-meter__label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.groundedness-meter__pct {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.groundedness-meter__bars {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0 8px;
+}
+
+.groundedness-meter__seg {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-raised);
+}
+
+.groundedness-meter__caption {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.groundedness-meter--high .groundedness-meter__pct {
+  color: var(--success);
+}
+.groundedness-meter--high .groundedness-meter__seg--fill {
+  background: var(--score-high);
+}
+.groundedness-meter--mid .groundedness-meter__pct {
+  color: var(--warning);
+}
+.groundedness-meter--mid .groundedness-meter__seg--fill {
+  background: var(--score-mid);
+}
+.groundedness-meter--low .groundedness-meter__pct {
+  color: var(--danger);
+}
+.groundedness-meter--low .groundedness-meter__seg--fill {
+  background: var(--score-low);
 }
 
 .draft-recipient {
@@ -995,6 +1104,18 @@ button[type="submit"] {
 
 .source-card:last-child {
   margin-bottom: 0;
+}
+
+/* In the reasoning trail, snippets read as an italic quote with a thin accent rail
+   (the filled-block .snippet treatment is kept for the live Contextual Signals panel). */
+.source-card .snippet {
+  margin-top: 6px;
+  padding: 2px 0 2px 12px;
+  background: transparent;
+  border: none;
+  border-left: 2px solid var(--snippet-border);
+  border-radius: 0;
+  font-style: italic;
 }
 
 .citation-tag {
@@ -1310,6 +1431,12 @@ button[type="submit"] {
 
 .clickable-row:hover {
   background: var(--color-accent-subtle);
+}
+
+/* Prospect name is the row's primary identifier — emphasize it. */
+#run-list-table tbody td:first-child {
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .badge {
