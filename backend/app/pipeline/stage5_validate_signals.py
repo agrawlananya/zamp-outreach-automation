@@ -16,7 +16,7 @@ def _verify(args: tuple[str, str, str, str, str]) -> tuple[str, str, str, bool]:
         claim, source_snippet, prospect_name, prospect_title, company_name
     )
     try:
-        response = call_llm(system_prompt, user_prompt)
+        response = call_llm(system_prompt, user_prompt, max_tokens=256)
         result = parse_json_response(response)
         valence = result.get("valence")
         if valence not in VALID_VALENCES:
