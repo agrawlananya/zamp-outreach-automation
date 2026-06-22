@@ -4,55 +4,118 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Zamp AI SDR — Run</title>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("theme");
+        document.documentElement.dataset.theme = t === "light" || t === "dark" ? t : "dark";
+      } catch (e) {
+        document.documentElement.dataset.theme = "dark";
+      }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Roboto+Mono:wght@400&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link rel="stylesheet" href="css/tokens.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <header class="app-header">
-    <div class="app-header__brand">Zamp AI SDR</div>
-    <nav class="app-header__nav">
-      <a href="index.html">New Prospect</a>
-      <a href="dashboard.html">Dashboard</a>
-    </nav>
-  </header>
-  <main class="content">
-    <div id="live-phase" class="card card--narrow" hidden>
-      <h1>Researching prospect…</h1>
-      <p class="muted">This usually takes under a minute.</p>
-      <ol class="stage-list" id="stage-list"></ol>
-    </div>
+  <div id="app-shell"></div>
+  <main class="app-main">
+    <div class="content">
+      <span id="fixture-badge" class="badge badge--fixture" hidden>Fixture: reproducible research</span>
 
-    <div id="review-phase" hidden>
-      <div id="status-banner" class="banner" hidden></div>
-      <div class="review-layout">
-        <section class="card draft-panel">
-          <h2>Draft</h2>
-          <label for="draft-subject">Subject</label>
-          <input type="text" id="draft-subject" />
-          <label for="draft-body">Body</label>
-          <textarea id="draft-body" rows="8"></textarea>
-
-          <div id="reject-reason-box" class="reject-reason-box" hidden>
-            <label for="reject-reason">Reason for rejection</label>
-            <input type="text" id="reject-reason" />
+      <div id="live-phase" hidden>
+        <div class="run-header">
+          <div class="run-header__left">
+            <div class="run-header__avatar" id="run-avatar"></div>
+            <div class="run-header__identity">
+              <div class="run-header__name-row">
+                <span class="run-header__name" id="run-name"></span>
+                <span class="badge badge--info"><span class="badge__dot"></span>RUNNING</span>
+              </div>
+              <div class="run-header__meta muted" id="run-meta"></div>
+            </div>
           </div>
-
-          <div class="actions">
-            <button id="approve-btn" class="btn btn--primary">Approve</button>
-            <button id="approve-edits-btn" class="btn">Approve with Edits</button>
-            <button id="reject-btn" class="btn btn--danger">Reject</button>
+          <div class="run-header__right">
+            <span class="run-header__stage-count" id="run-stage-count"></span>
+            <button type="button" id="view-logs-btn" class="btn btn--secondary btn--small">View Logs</button>
           </div>
-          <div id="decision-confirmation" class="confirmation" hidden>Decision recorded.</div>
-        </section>
+        </div>
 
-        <section class="card reasoning-panel">
-          <h2>Reasoning Trail</h2>
-          <div id="reasoning-trail"></div>
-        </section>
+        <div id="logs-panel" class="card logs-panel" hidden>
+          <h2>Audit Log</h2>
+          <table class="data-table">
+            <thead>
+              <tr><th>Stage</th><th>Status</th><th>Latency</th><th>Time</th></tr>
+            </thead>
+            <tbody id="logs-body"></tbody>
+          </table>
+        </div>
+
+        <div class="run-columns">
+          <section class="card pipeline-card">
+            <h2>Execution Pipeline</h2>
+            <div id="pipeline-list"></div>
+          </section>
+          <section class="card signals-card">
+            <h2>Contextual Signals</h2>
+            <div id="signals-list"></div>
+          </section>
+        </div>
       </div>
-    </div>
 
-    <div id="load-error" class="card card--narrow" hidden></div>
+      <div id="review-phase" hidden>
+        <div id="status-banner" class="banner" hidden></div>
+        <div id="role-confirmation-note" class="muted" hidden></div>
+        <section id="pipeline-recap-card" class="card pipeline-recap-card" hidden>
+          <h2>Execution Pipeline</h2>
+          <div id="pipeline-recap-list"></div>
+        </section>
+        <div class="review-layout">
+          <section class="card draft-panel">
+            <div class="draft-panel__header">
+              <h3 class="draft-panel__eyebrow">Generated Draft</h3>
+              <span id="groundedness-pill" class="badge" hidden></span>
+            </div>
+            <div id="draft-recipient" class="draft-recipient muted"></div>
+
+            <label for="draft-subject">Subject</label>
+            <input type="text" id="draft-subject" />
+
+            <label>Body</label>
+            <div id="draft-body-rendered" class="draft-body"></div>
+            <textarea id="draft-body" class="draft-body draft-body--edit" rows="10" hidden></textarea>
+
+            <div id="reject-reason-box" class="reject-reason-box" hidden>
+              <label for="reject-reason">Reason for rejection</label>
+              <input type="text" id="reject-reason" />
+            </div>
+
+            <div class="actions" id="draft-actions">
+              <button id="reject-btn" class="btn btn--danger">Reject</button>
+              <button id="approve-edits-btn" class="btn btn--secondary">Approve with Edits</button>
+              <button id="approve-btn" class="btn btn--success">Approve</button>
+            </div>
+            <div id="decision-confirmation" class="confirmation" hidden></div>
+          </section>
+
+          <section class="card reasoning-panel">
+            <h2>Reasoning Trail</h2>
+            <div id="reasoning-trail"></div>
+          </section>
+        </div>
+      </div>
+
+      <div id="load-error" class="card card--narrow" hidden></div>
+    </div>
   </main>
-  <script type="module" src="js/run-view.js"></script>
+  <script type="module">
+    import { renderLayout } from "./js/layout.js";
+    renderLayout({ active: "", title: "Run Detail" });
+  </script>
+  <script type="module" src="js/run-view.js?v=5"></script>
 </body>
 </html>
