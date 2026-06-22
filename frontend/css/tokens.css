@@ -1,19 +1,43 @@
 :root{
-  /* brand */
-  --color-ink:#16171A; --color-accent:#2347E5; --color-accent-hover:#1A38C4; --color-accent-subtle:#EBF0FD;
-  --color-mist:#ECEEF3; --color-paper:#FFFFFF; --color-raised:#E4E7EF;
-  --color-border:#ECEEF3; --color-border-strong:#C8CCDA;
-  --text-primary:#16171A; --text-secondary:#5B5E66; --text-muted:#9396A0;
-  /* semantic status (text / bg) */
-  --success:#16A34A; --success-bg:#F0FDF4; --warning:#D97706; --warning-bg:#FFFBEB;
-  --danger:#DC2626;  --danger-bg:#FEF2F2;  --info:#2347E5;    --info-bg:#EBF0FD;
-  --neutral:#5B5E66; --neutral-bg:#ECEEF3;
-  /* sidebar (always dark) */
-  --sidebar-bg:#16171A; --sidebar-text:#9396A0; --sidebar-text-active:#FFFFFF; --sidebar-active-bg:#2C2D32;
-  /* trust signals */
-  --snippet-bg:#E4E7EF; --snippet-border:#C8CCDA; --score-high:#16A34A; --score-mid:#D97706; --score-low:#DC2626;
+  /* ── Theme-agnostic tokens ─────────────────────────────────────────── */
   /* radii */ --radius-sm:4px; --radius-md:6px; --radius-lg:8px; --radius-xl:12px; --radius-full:9999px;
   /* spacing — 8px grid */ --space-xs:4px; --space-sm:8px; --space-md:16px; --space-lg:24px; --space-xl:32px; --space-2xl:48px;
   --sidebar-width:240px; --topbar-height:56px; --card-padding:24px; --row-height:40px; --gutter:24px; --max-content:1280px;
-  /* type */ --font-sans:'Inter',system-ui,sans-serif; --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  /* type */ --font-sans:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; --font-mono:'Roboto Mono',ui-monospace,monospace;
+}
+
+/* ── Dark theme (default / hero) ─────────────────────────────────────── */
+:root[data-theme="dark"]{
+  /* brand */
+  --color-ink:#0c0e12; --color-accent:#7c83ff; --color-accent-hover:#aeb3ff; --color-accent-subtle:#1c2129;
+  --color-mist:#0c0e12; --color-paper:#161a20; --color-raised:#1c2129;
+  --color-border:#232a33; --color-border-strong:#3a4049;
+  --text-primary:#e9ebf1; --text-secondary:#c8cdd6; --text-muted:#737b89;
+  /* semantic status (text / bg) */
+  --success:#38c08a; --success-bg:#1c2129; --warning:#e0a93c; --warning-bg:#1c2129;
+  --danger:#f06a5d;  --danger-bg:#1c2129;  --info:#7c83ff;    --info-bg:#1c2129;
+  --neutral:#9aa0a8; --neutral-bg:#1c2129;
+  /* sidebar */
+  --sidebar-bg:#0e1116; --sidebar-text:#9aa0a8; --sidebar-text-active:#e9ebf1; --sidebar-active-bg:#1c2129;
+  --sidebar-border:#1c2129;
+  /* trust signals */
+  --snippet-bg:#1c2129; --snippet-border:#2a313b; --score-high:#38c08a; --score-mid:#e0a93c; --score-low:#f06a5d;
+}
+
+/* ── Light theme ─────────────────────────────────────────────────────── */
+:root[data-theme="light"]{
+  /* brand */
+  --color-ink:#16181d; --color-accent:#4b44d6; --color-accent-hover:#3a34b8; --color-accent-subtle:#edeef1;
+  --color-mist:#ffffff; --color-paper:#ffffff; --color-raised:#f1f2f4;
+  --color-border:#e2e3e7; --color-border-strong:#c8ccd2;
+  --text-primary:#16181d; --text-secondary:#5c616a; --text-muted:#83888f;
+  /* semantic status (text / bg) */
+  --success:#1f9d61; --success-bg:#e7f4ec; --warning:#b9770a; --warning-bg:#fbf1dd;
+  --danger:#d1453b;  --danger-bg:#fdf3f2;  --info:#4b44d6;    --info-bg:#edeef1;
+  --neutral:#5c616a; --neutral-bg:#edeef1;
+  /* sidebar */
+  --sidebar-bg:#f9fafb; --sidebar-text:#5c616a; --sidebar-text-active:#16181d; --sidebar-active-bg:#edeef1;
+  --sidebar-border:#e2e3e7;
+  /* trust signals */
+  --snippet-bg:#edeef1; --snippet-border:#c8ccd2; --score-high:#1f9d61; --score-mid:#b9770a; --score-low:#d1453b;
 }

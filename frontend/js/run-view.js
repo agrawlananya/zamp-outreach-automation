@@ -560,15 +560,19 @@ function renderDraftPanel(detail, citationIndex) {
   }
 }
 
-function renderWebResearchBlock(detail, citationIndex) {
+function renderWebResearchCollapsible(detail, citationIndex) {
   const signalById = new Map(detail.signals.map((s) => [s.id, s]));
   const entries = [...citationIndex.entries()].sort((a, b) => a[1] - b[1]);
 
+  const summaryContent = `<span style="display:flex; align-items:center; gap:8px;"><i class="ph ph-check" style="color: var(--success); font-size: 14px; stroke-width: 2px;"></i> Web Research</span>`;
+
   if (!entries.length) {
-    return `<div class="trail-block">
-      <h3>Web Research</h3>
-      <p class="muted">No sources were cited in this draft.</p>
-    </div>`;
+    return `<details class="trail-collapsible" open>
+      <summary>${summaryContent}</summary>
+      <div class="trail-collapsible__body">
+        <p class="muted">No sources were cited in this draft.</p>
+      </div>
+    </details>`;
   }
 
   const cards = entries
@@ -587,13 +591,15 @@ function renderWebResearchBlock(detail, citationIndex) {
     })
     .join("");
 
-  return `<div class="trail-block">
-    <h3>Web Research</h3>
-    ${cards}
-  </div>`;
+  return `<details class="trail-collapsible" open>
+    <summary>${summaryContent}</summary>
+    <div class="trail-collapsible__body">
+      ${cards}
+    </div>
+  </details>`;
 }
 
-function renderHookScoringBlock(detail) {
+function renderHookScoringCollapsible(detail) {
   const ordered = [...detail.signals].sort((a, b) => {
     if (a.selected_as_hook !== b.selected_as_hook) return a.selected_as_hook ? -1 : 1;
     const sa = a.adjusted_hook_score ?? a.hook_score ?? 0;
@@ -610,25 +616,32 @@ function renderHookScoringBlock(detail) {
         <p class="hook-candidate__claim">${escapeHtml(s.claim)}</p>
         <div class="hook-candidate__meta">
           <span class="hook-candidate__flag hook-candidate__flag--${flag.cls}">${flag.label}</span>
-          ${renderScoreBar(finalScore)}
-          ${s.adjusted_hook_score !== null && s.adjusted_hook_score !== undefined && s.adjusted_hook_score !== s.hook_score ? `<span class="score-adjusted">raw ${hookScoreText(s)}</span>` : ""}
+          <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+            <span style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted); text-transform:uppercase;">HOOK</span>
+            ${renderScoreBar(finalScore)}
+            ${s.adjusted_hook_score !== null && s.adjusted_hook_score !== undefined && s.adjusted_hook_score !== s.hook_score ? `<span class="score-adjusted" style="margin-left: 8px;">raw ${hookScoreText(s)}</span>` : ""}
+          </div>
         </div>
         <div class="hook-candidate__axes">
-          <span>REL ${formatScore(s.relevance_score)}</span>
-          <span>SPEC ${formatScore(s.specificity_score)}</span>
-          <span>REC ${formatScore(s.recency_score)}</span>
-          <span>ACT ${formatScore(s.actionability_score)}</span>
-          <span>VER ${formatScore(s.verifiability_score)}</span>
+          <span class="score-tag"><span class="score-tag__label">REL</span><span class="score-tag__value">${formatScore(s.relevance_score)}</span></span>
+          <span class="score-tag"><span class="score-tag__label">SPEC</span><span class="score-tag__value">${formatScore(s.specificity_score)}</span></span>
+          <span class="score-tag"><span class="score-tag__label">REC</span><span class="score-tag__value">${formatScore(s.recency_score)}</span></span>
+          <span class="score-tag"><span class="score-tag__label">ACT</span><span class="score-tag__value">${formatScore(s.actionability_score)}</span></span>
+          <span class="score-tag"><span class="score-tag__label">VER</span><span class="score-tag__value">${formatScore(s.verifiability_score)}</span></span>
         </div>
       </div>`;
     })
     .join("");
 
-  return `<div class="trail-block">
-    <h3>Hook Scoring</h3>
-    <p class="muted trail-caption">5 axes &rarr; REL &middot; SPEC &middot; REC &middot; ACT &middot; VER. HOOK = weighted composite.</p>
-    ${candidates}
-  </div>`;
+  const summaryContent = `<span style="display:flex; align-items:center; gap:8px;"><i class="ph ph-check" style="color: var(--success); font-size: 14px; stroke-width: 2px;"></i> Hook Scoring</span>`;
+
+  return `<details class="trail-collapsible" open>
+    <summary>${summaryContent}</summary>
+    <div class="trail-collapsible__body">
+      <p class="muted trail-caption" style="margin-top: 0; margin-bottom: 12px;">5 axes &rarr; REL &middot; SPEC &middot; REC &middot; ACT &middot; VER. HOOK = weighted composite.</p>
+      ${candidates}
+    </div>
+  </details>`;
 }
 
 function renderPersonaMatchCollapsible(detail) {
@@ -697,8 +710,8 @@ function renderReasoningTrail(detail) {
   const citationIndex = buildCitationIndex(parseBodySentences(detail.draft));
 
   container.innerHTML =
-    renderWebResearchBlock(detail, citationIndex) +
-    renderHookScoringBlock(detail) +
+    renderWebResearchCollapsible(detail, citationIndex) +
+    renderHookScoringCollapsible(detail) +
     renderPersonaMatchCollapsible(detail) +
     renderDraftGenerationCollapsible(detail) +
     renderGroundednessCheckCollapsible(detail);

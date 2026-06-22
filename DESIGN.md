@@ -8,217 +8,225 @@ description: >
   draft before anything is sent; the reasoning trail is co-equal with the output.
 
 colors:
-  # ─── Brand primitives (Zamp Brand Guidelines v1) ───────────────────────────
-  # Ink #16171A · Accent #2347E5 · Slate #5B5E66 · Mist #ECEEF3 · Paper #FFFFFF
-  # Semantic status overrides (success, warning, danger) are outside the brand
-  # palette but retained for functional run-outcome signalling.
+  # ─── Dual-theme palette ────────────────────────────────────────────────────
+  # The product ships two themes — DARK (default) and LIGHT — toggled via a
+  # [data-theme] attribute on <html> and persisted in localStorage. Token NAMES
+  # are identical across themes; only their values change (see frontend/css/
+  # tokens.css). Each `value` below is the DARK (default) value; the light-theme
+  # counterpart is given as "Light: #xxxxxx" in the description.
+  #
+  # Accent is indigo: #7c83ff (dark) / #4b44d6 (light) — replacing the former
+  # royal-blue brand accent #2347E5. Typeface is IBM Plex Sans / IBM Plex Mono.
+  # Semantic status colors (success, warning, danger) sit outside the brand
+  # palette but are retained for functional run-outcome signalling.
 
   # Interactive accent
   primary:
-    value: "#2347E5"
+    value: "#7c83ff"
     description: >
-      Brand Accent. The sole interactive action color — used exclusively for
+      Indigo accent. The sole interactive action color — used exclusively for
       primary buttons, hyperlinks, focus rings, and active-state indicators.
       One accent per view; never diluted or repurposed for decoration.
+      Light: #4b44d6.
   primary-hover:
-    value: "#1A38C4"
+    value: "#aeb3ff"
     description: >
-      Accent darkened ~10%. Applied on hover and pressed states for primary
-      interactive elements. Never used as a standalone fill color.
+      Accent hover/pressed state for primary interactive elements. In dark mode
+      the accent lightens on hover; in light mode it darkens. Never used as a
+      standalone fill color. Light: #3a34b8.
   primary-subtle:
-    value: "#EBF0FD"
+    value: "#1c2129"
     description: >
-      Accent at ~8% opacity over Paper. Used for selected-row highlight
-      backgrounds, hover states on ghost/text buttons, and focus-area tints.
+      Low-emphasis accent surface. Used for selected-row highlight backgrounds,
+      hover states on ghost/text buttons, and focus-area tints. Light: #edeef1.
 
   # Brand anchors
   secondary:
-    value: "#16171A"
+    value: "#0c0e12"
     description: >
-      Brand Ink. Near-black with a warm undertone. The sidebar background and
-      the visual brand anchor of every screen. Communicates authority without
-      feeling cold or pure-black.
+      Ink. Near-black page anchor in the dark theme and the deepest tonal step.
+      In the light theme this resolves to the primary ink text color.
+      Light: #16181d.
   tertiary:
-    value: "#16A34A"
+    value: "#38c08a"
     description: >
-      Forest green. Not in the brand palette; retained as a product-level
+      Approve green. Not in the brand palette; retained as a product-level
       semantic token for the Approve action only. Its uniqueness reinforces the
       gravity of approval. Never used for any other positive or decorative state.
+      Light: #1f9d61.
 
   # Surfaces & backgrounds
   neutral:
-    value: "#ECEEF3"
+    value: "#0c0e12"
     description: >
-      Brand Mist. The page-level background for all screens. Slightly cool;
-      reduces eye strain in extended sessions. Never use Paper (#FFFFFF) as a
-      page background — surface elevation must be legible through tonal contrast.
+      Page-level background for all screens. Surface elevation must stay legible
+      through tonal contrast against the card surface — never set a card to the
+      same value as the page. Light: #f1f2f4.
   surface:
-    value: "#FFFFFF"
+    value: "#161a20"
     description: >
-      Brand Paper. Used only for cards and raised content panels. The primary
-      content container surface, set against the Mist page background to
-      establish the first tonal elevation step.
+      Card / panel surface. The primary content container, set against the page
+      background to establish the first tonal elevation step. Light: #fcfcfd.
   surface-raised:
-    value: "#E4E7EF"
+    value: "#1c2129"
     description: >
-      Mist darkened slightly (~5%). Used for nested surfaces within cards —
-      table header rows, expanded pipeline stage panels, and snippet block
-      backgrounds. Establishes the second tonal elevation step without shadows.
+      Nested surface within cards — table header rows, expanded pipeline stage
+      panels, and snippet block backgrounds. The second tonal elevation step,
+      achieved without shadows. Light: #e3e4e8.
 
   # Borders & dividers
   border:
-    value: "#ECEEF3"
+    value: "#232a33"
     description: >
-      Brand Mist. Default 1px border for cards and structural dividers. Tonal
-      and low-contrast — defines layout structure without visual weight.
+      Default 1px border for cards and structural dividers. Tonal and
+      low-contrast — defines layout structure without visual weight.
+      Light: #e2e3e7.
   border-strong:
-    value: "#C8CCDA"
+    value: "#3a4049"
     description: >
-      Mist darkened for emphasis. Used for input field borders, table row
-      separators, and any divider that needs to be legible against surface-raised
-      backgrounds.
+      Emphasis border. Used for input field borders, table row separators, and
+      any divider that needs to be legible against surface-raised backgrounds.
+      Light: #c8ccd2.
 
   # Text
   text-primary:
-    value: "#16171A"
+    value: "#e9ebf1"
     description: >
-      Brand Ink. All primary readable content — headings, body copy, labels,
-      and data values. Same hex as the sidebar background; creates a consistent
-      brand-anchored near-black across contexts.
+      All primary readable content — headings, body copy, labels, and data
+      values. The highest-contrast text token in each theme. Light: #16181d.
   text-secondary:
-    value: "#5B5E66"
+    value: "#c8cdd6"
     description: >
-      Brand Slate. Supporting text — field labels, captions, metadata rows,
-      and secondary data values. Sufficient contrast on both Paper and Mist
-      backgrounds for WCAG AA compliance.
+      Supporting text — field labels, captions, metadata rows, and secondary
+      data values. Meets WCAG AA on both the page and card surfaces.
+      Light: #5c616a.
   text-muted:
-    value: "#9396A0"
+    value: "#737b89"
     description: >
-      Slate lightened ~25%. Placeholder text, disabled-state labels, timestamps,
-      and decorative separators. Intentionally low-contrast — never use for
-      content the user must read to complete a task.
+      Placeholder text, disabled-state labels, timestamps, and decorative
+      separators. Intentionally low-contrast — never use for content the user
+      must read to complete a task. Light: #83888f.
 
   # Semantic status colors
   status-success:
-    value: "#16A34A"
+    value: "#38c08a"
     description: >
       Semantic success green. Used for the Approve button fill, READY badge
       text, score-bar-high, and completed pipeline stage icons. Also maps to
-      tertiary. Never repurposed for non-approval positive states.
+      tertiary. Never repurposed for non-approval positive states. Light: #1f9d61.
   status-success-bg:
-    value: "#F0FDF4"
+    value: "#1c2129"
     description: >
-      Soft green tint. Background fill for success badges and banners. Always
-      paired with status-success text to meet contrast requirements.
+      Background fill for success badges and banners. Always paired with
+      status-success text to meet contrast requirements. Light: #e7f4ec.
   status-warning:
-    value: "#D97706"
+    value: "#e0a93c"
     description: >
       Semantic warning amber. Used for INSUFFICIENT SIGNAL and NEEDS RESEARCH
-      badge text, score-bar-mid, and degraded pipeline stage icons.
+      badge text, score-bar-mid, and degraded pipeline stage icons. Light: #b9770a.
   status-warning-bg:
-    value: "#FFFBEB"
+    value: "#1c2129"
     description: >
-      Soft amber tint. Background fill for warning badges and banners. Always
-      paired with status-warning text.
+      Background fill for warning badges and banners. Always paired with
+      status-warning text. Light: #fbf1dd.
   status-danger:
-    value: "#DC2626"
+    value: "#f06a5d"
     description: >
       Semantic danger red. Used for FAILED badge text, score-bar-low, the
       Reject button border and text, and error-state input borders. The only
-      permitted uses of red in the product.
+      permitted uses of red in the product. Light: #d1453b.
   status-danger-bg:
-    value: "#FEF2F2"
+    value: "#1c2129"
     description: >
-      Soft red tint. Background fill for danger badges, banners, and inline
-      error messages. Always paired with status-danger text.
+      Background fill for danger badges, banners, and inline error messages.
+      Always paired with status-danger text. Light: #fdf3f2.
   status-info:
-    value: "#2347E5"
+    value: "#7c83ff"
     description: >
-      Brand Accent — mirrors primary. Used for RUNNING badge text and info
-      banners. Intentionally the same as primary to maintain a single blue in
-      the system.
+      Mirrors primary (indigo accent). Used for RUNNING badge text and info
+      banners. Intentionally the same as primary to maintain a single accent in
+      the system. Light: #4b44d6.
   status-info-bg:
-    value: "#EBF0FD"
+    value: "#1c2129"
     description: >
       Matches primary-subtle. Background fill for info badges and RUNNING status
-      banners. Always paired with status-info text.
+      banners. Always paired with status-info text. Light: #edeef1.
   status-neutral:
-    value: "#5B5E66"
+    value: "#9aa0a8"
     description: >
-      Brand Slate. Used for REVIEWED badge text and neutral/inactive state
-      indicators. Communicates completion without a positive or negative valence.
+      Used for REVIEWED badge text and neutral/inactive state indicators.
+      Communicates completion without a positive or negative valence.
+      Light: #5c616a.
   status-neutral-bg:
-    value: "#ECEEF3"
+    value: "#1c2129"
     description: >
-      Brand Mist. Background fill for neutral badges. Low visual weight —
-      used for states that need labelling but not emphasis.
+      Background fill for neutral badges. Low visual weight — used for states
+      that need labelling but not emphasis. Light: #edeef1.
 
-  # Sidebar
+  # Sidebar — theme-scoped (dark sidebar in dark theme, light sidebar in light)
   sidebar-bg:
-    value: "#16171A"
+    value: "#0e1116"
     description: >
-      Brand Ink. The fixed left sidebar background. Anchors every screen with
-      the brand's near-black and creates strong contrast for the navigation
-      items rendered over it.
+      Fixed left sidebar background. Follows the active theme — a near-black
+      panel in dark mode, a near-white panel (with a 1px right divider) in light
+      mode. Light: #fcfcfd.
   sidebar-text:
-    value: "#9396A0"
+    value: "#9aa0a8"
     description: >
-      Ink lightened for legibility against the dark sidebar background. Used
-      for inactive navigation item labels and supporting sidebar metadata.
-      Meets WCAG AA on sidebar-bg.
+      Inactive navigation item labels and supporting sidebar metadata. Meets
+      WCAG AA on sidebar-bg in both themes. Light: #5c616a.
   sidebar-text-active:
-    value: "#FFFFFF"
+    value: "#e9ebf1"
     description: >
-      Brand Paper. Active navigation item label color on the dark sidebar.
-      Full white over Ink provides maximum contrast and clear active-state
-      signalling.
+      Active navigation item label and brand wordmark color. Maximum contrast
+      against sidebar-bg in each theme. Light: #16181d.
   sidebar-active-bg:
-    value: "#2C2D32"
+    value: "#1c2129"
     description: >
-      Ink lightened ~10%. Background fill for the active or hovered navigation
-      item in the sidebar. Tonal step above sidebar-bg — no border or shadow
-      needed to distinguish the active item.
+      Background fill for the active or hovered navigation item, and the base of
+      the theme-toggle control. One tonal step from sidebar-bg — no border or
+      shadow needed to distinguish the active item. Light: #edeef1.
 
   # Score bars
   score-high:
-    value: "#16A34A"
+    value: "#38c08a"
     description: >
-      Semantic green (matches status-success). Applied to score bars when the
-      hook score is ≥ 0.7. Signals a strong, research-backed signal that is
-      likely ready for review.
+      Matches status-success. Applied to score bars when the hook score is
+      ≥ 0.7 — a strong, research-backed signal likely ready for review.
+      Light: #1f9d61.
   score-mid:
-    value: "#D97706"
+    value: "#e0a93c"
     description: >
-      Semantic amber (matches status-warning). Applied to score bars when the
-      hook score is between 0.45 and 0.69. Signals a marginal signal — human
-      review is especially important at this range.
+      Matches status-warning. Applied to score bars when the hook score is
+      between 0.45 and 0.69 — a marginal signal where human review especially
+      matters. Light: #b9770a.
   score-low:
-    value: "#DC2626"
+    value: "#f06a5d"
     description: >
-      Semantic red (matches status-danger). Applied to score bars when the hook
-      score is < 0.45. Signals insufficient signal — the run will route to
-      insufficient_signal rather than generating a confident draft.
+      Matches status-danger. Applied to score bars when the hook score is
+      < 0.45 — insufficient signal; the run routes to insufficient_signal rather
+      than generating a confident draft. Light: #d1453b.
 
   # Source snippet blocks
   snippet-bg:
-    value: "#E4E7EF"
+    value: "#1c2129"
     description: >
       Matches surface-raised. The background of verbatim source snippet blocks.
       Visually separates quoted, human-authored source text from AI-generated
-      prose — a primary trust signal in the product. Never use Paper or Mist
-      here; the contrast step must be perceptible.
+      prose — a primary trust signal in the product. The contrast step against
+      the card surface must stay perceptible. Light: #edeef1.
   snippet-border:
-    value: "#C8CCDA"
+    value: "#2a313b"
     description: >
-      Matches border-strong. The 1px border on snippet blocks. Reinforces the
-      visual boundary between snippet content and surrounding card prose.
+      The 1px border on snippet blocks. Reinforces the visual boundary between
+      snippet content and surrounding card prose. Light: #c8ccd2.
 
 typography:
   # ─── Brand spec ─────────────────────────────────────────────────────────────
-  # Grotesque sans, weight 500 (headlines) / 400 (body). Inter is used as the
-  # grotesque sans throughout — it is a humanist grotesque with strong legibility
+  # Grotesque sans, weight 500 (headlines) / 400 (body). IBM Plex Sans is used as
+  # the grotesque sans throughout — a humanist grotesque with strong legibility
   # at the small sizes this product requires.
-  # JetBrains Mono is reserved for source snippets and the email draft body only.
+  # IBM Plex Mono is reserved for source snippets and the email draft body only.
   #
   # Product exception: the brand spec says "never ALL CAPS in copy." This product
   # uses uppercase in two non-prose contexts only — badge labels and table column
@@ -226,7 +234,7 @@ typography:
   # documented here so it is not mistaken for brand non-compliance.
 
   display:
-    fontFamily: Inter
+    fontFamily: IBM Plex Sans
     fontSize: 24px
     fontWeight: 500
     lineHeight: 1.2
@@ -237,7 +245,7 @@ typography:
       at large sizes. Never used for subheadings or section labels.
 
   headline-lg:
-    fontFamily: Inter
+    fontFamily: IBM Plex Sans
     fontSize: 20px
     fontWeight: 500
     lineHeight: 1.3
@@ -248,7 +256,7 @@ typography:
       size would be too heavy.
 
   headline-md:
-    fontFamily: Inter
+    fontFamily: IBM Plex Sans
     fontSize: 16px
     fontWeight: 500
     lineHeight: 1.4
@@ -258,7 +266,7 @@ typography:
       layout. No letter-spacing adjustment at this size.
 
   headline-sm:
-    fontFamily: Inter
+    fontFamily: IBM Plex Sans
     fontSize: 14px
     fontWeight: 500
     lineHeight: 1.4
@@ -268,7 +276,7 @@ typography:
       bold body text. Never use for running prose.
 
   body-lg:
-    fontFamily: Inter
+    fontFamily: IBM Plex Sans
     fontSize: 15px
     fontWeight: 400
     lineHeight: 1.6
@@ -278,7 +286,7 @@ typography:
       for scanning dense signal summaries without losing place.
 
   body-md:
-    fontFamily: Inter
+    fontFamily: IBM Plex Sans
     fontSize: 14px
     fontWeight: 400
     lineHeight: 1.6
@@ -288,7 +296,7 @@ typography:
       for the product.
 
   body-sm:
-    fontFamily: Inter
+    fontFamily: IBM Plex Sans
     fontSize: 13px
     fontWeight: 400
     lineHeight: 1.5
@@ -298,7 +306,7 @@ typography:
       Not for primary reading; information at this size supports, not leads.
 
   label-md:
-    fontFamily: Inter
+    fontFamily: IBM Plex Sans
     fontSize: 12px
     fontWeight: 500
     lineHeight: 1
@@ -309,7 +317,7 @@ typography:
       structural metadata labels — not for prose or inline emphasis.
 
   label-sm:
-    fontFamily: Inter
+    fontFamily: IBM Plex Sans
     fontSize: 11px
     fontWeight: 500
     lineHeight: 1
@@ -321,7 +329,7 @@ typography:
       pill badges and compact inline tags.
 
   mono:
-    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontFamily: "IBM Plex Mono, ui-monospace, monospace"
     fontSize: 13px
     fontWeight: 400
     lineHeight: 1.6
@@ -332,7 +340,7 @@ typography:
       mono for AI-generated text outside the email draft body.
 
   email-body:
-    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontFamily: "IBM Plex Mono, ui-monospace, monospace"
     fontSize: 14px
     fontWeight: 400
     lineHeight: 1.7
@@ -733,43 +741,67 @@ The tool has a non-technical primary user: an SDR or AE who reviews AI-generated
 
 ## Colors
 
-The palette is derived directly from the Zamp Brand Guidelines (v1). Five brand primitives — Ink, Accent, Slate, Mist, Paper — are mapped to all product-level tokens. Semantic status colors (success green, warning amber, danger red) are not in the brand palette and are retained as functional overrides.
+The product ships **two themes — Dark (default) and Light** — built on a single set of token names whose values swap per theme (see the Theming section). The accent is **indigo** (`#7c83ff` dark / `#4b44d6` light), replacing the former royal-blue brand accent. Semantic status colors (success green, warning amber, danger red) sit outside the brand palette and are retained as functional overrides in both themes.
 
-- **Primary / Accent (#2347E5):** Brand Accent — used exclusively for primary interactive actions (buttons, links, focus rings, active states). One action color per view, always the same, never diluted.
-- **Primary Subtle (#EBF0FD):** Accent at ~8% opacity on Paper — for hover backgrounds on primary elements and selected row highlights.
-- **Secondary / Ink (#16171A):** Brand Ink — the sidebar background and brand anchor. Near-black with a warm undertone; communicates authority without feeling cold.
-- **Tertiary (#16A34A):** Forest green — approve/success states only. Outside the brand palette; retained for the semantic weight of the approval action. Never used for decoration.
-- **Neutral / Mist (#ECEEF3):** Brand Mist — the page background. Slightly cool, reduces eye strain in extended sessions. Never use Paper (#FFFFFF) as a page background.
-- **Surface / Paper (#FFFFFF):** Brand Paper — cards and raised content panels only.
-- **Text Primary / Ink (#16171A):** Brand Ink — all primary readable content.
-- **Text Secondary / Slate (#5B5E66):** Brand Slate — supporting labels, captions, and metadata.
-- **Text Muted (#9396A0):** Slate lightened ~25% — placeholder text, disabled states, timestamps.
-- **Status colors:** Four semantic colors — Success green (#16A34A), Warning amber (#D97706), Danger red (#DC2626), Info blue (#2347E5) — each with a paired soft background tint for badges and banners.
-- **Snippet Background (#E4E7EF):** Darkened Mist for source snippet blocks inside cards. Visually separates AI-generated prose from verbatim human-authored source text — a critical trust signal in this product.
+The bullets below describe each token by role; values are listed as **dark / light**.
+
+- **Primary / Accent (#7c83ff / #4b44d6):** Indigo accent — used exclusively for primary interactive actions (buttons, links, focus rings, active states). One action color per view, never diluted.
+- **Primary Subtle (#1c2129 / #edeef1):** Low-emphasis accent surface — hover backgrounds on primary elements and selected row highlights.
+- **Tertiary / Approve (#38c08a / #1f9d61):** Approve-green — approve/success states only. Retained for the semantic weight of the approval action; never used for decoration.
+- **Page background (#0c0e12 / #f1f2f4):** The base layer for all screens. Card surfaces sit one tonal step above; never set a card to the page value.
+- **Surface / Card (#161a20 / #fcfcfd):** Cards and raised content panels only.
+- **Surface Raised (#1c2129 / #e3e4e8):** Nested surfaces inside cards — table headers, expanded stage panels, snippet blocks.
+- **Text Primary (#e9ebf1 / #16181d):** All primary readable content.
+- **Text Secondary (#c8cdd6 / #5c616a):** Supporting labels, captions, and metadata.
+- **Text Muted (#737b89 / #83888f):** Placeholder text, disabled states, timestamps.
+- **Status colors:** Four semantic roles — Success (#38c08a / #1f9d61), Warning (#e0a93c / #b9770a), Danger (#f06a5d / #d1453b), Info = accent (#7c83ff / #4b44d6). In the dark theme all status *background* tints collapse to the raised surface (#1c2129) and the status text color carries the meaning; in the light theme each has a soft colored tint (e.g. success #e7f4ec, warning #fbf1dd, danger #fdf3f2).
+- **Snippet Background (#1c2129 / #edeef1):** A distinct surface for verbatim source snippet blocks inside cards. Visually separates AI-generated prose from human-authored source text — a critical trust signal in this product.
+
+## Theming
+
+The interface supports a **Dark** theme (default) and a **Light** theme. Both are defined as token sets in [`frontend/css/tokens.css`](frontend/css/tokens.css): theme-agnostic tokens (radii, spacing, layout dimensions, font families) live in `:root`, and each theme overrides the color tokens under `:root[data-theme="dark"]` and `:root[data-theme="light"]`.
+
+- **Switching:** the active theme is set via a `data-theme` attribute on the `<html>` element. A toggle in the sidebar footer flips it and persists the choice to `localStorage` under the key `theme`. A tiny inline script in each page's `<head>` applies the stored theme before first paint, so there is no flash of the wrong theme on load.
+- **Default:** Dark. If no preference is stored (or storage is unavailable), the app renders the dark theme.
+- **Same names, different values:** because both themes share token names, all component CSS is written once against the tokens — no theme-specific component rules are needed. The only theme-aware exceptions are the per-theme token values themselves.
+- **Sidebar follows the theme:** the sidebar is a dark panel in the dark theme and a near-white panel (with a 1px right divider) in the light theme — there is no dark sidebar on a light page.
+
+| Token | Dark (default) | Light |
+|---|---|---|
+| Page background | `#0c0e12` | `#f1f2f4` |
+| Card surface | `#161a20` | `#fcfcfd` |
+| Raised surface / snippet | `#1c2129` | `#e3e4e8` / `#edeef1` |
+| Border / border-strong | `#232a33` / `#3a4049` | `#e2e3e7` / `#c8ccd2` |
+| Accent / hover / subtle | `#7c83ff` / `#aeb3ff` / `#1c2129` | `#4b44d6` / `#3a34b8` / `#edeef1` |
+| Text primary / secondary / muted | `#e9ebf1` / `#c8cdd6` / `#737b89` | `#16181d` / `#5c616a` / `#83888f` |
+| Success / Warning / Danger | `#38c08a` / `#e0a93c` / `#f06a5d` | `#1f9d61` / `#b9770a` / `#d1453b` |
+| Sidebar bg / active / text-active | `#0e1116` / `#1c2129` / `#e9ebf1` | `#fcfcfd` / `#edeef1` / `#16181d` |
+
+Maintain WCAG AA contrast in **both** themes when introducing or adjusting tokens.
 
 ## Typography
 
-The typographic system follows the Zamp brand spec: a **grotesque sans at weight 500 (headlines) and 400 (body)**, with monospace reserved for data, labels, and metrics. **Inter** is used as the grotesque sans throughout; **JetBrains Mono** is reserved exclusively for source snippets and the generated email body.
+The typographic system follows the Zamp brand spec: a **grotesque sans at weight 500 (headlines) and 400 (body)**, with monospace reserved for data, labels, and metrics. **IBM Plex Sans** is used as the grotesque sans throughout; **IBM Plex Mono** is reserved exclusively for source snippets and the generated email body.
 
 **One deliberate product exception to brand guidance:** the brand spec says "never ALL CAPS in copy." In this product, uppercase is used in two narrow, non-prose contexts — badge labels and table column headers — where it functions as a metadata legibility signal, not copy. This is an intentional override, not a drift.
 
-- **Display / Headlines:** Inter Medium (weight 500) at varying scales. Tight letter-spacing on large sizes (−0.02em at 24px) for a compressed, professional feel. Never decorative — used only for page titles, card headings, and section labels.
-- **Body:** Inter Regular at 14–15px with 1.6 line-height for comfortable scanning of dense reasoning trail content.
-- **Labels:** Inter Medium at 11–12px, uppercase, with generous letter spacing (0.06–0.08em). Used for badge text, table column headers, and all status indicators only — never in prose.
-- **Monospace (JetBrains Mono):** Used in two specific contexts only:
+- **Display / Headlines:** IBM Plex Sans Medium (weight 500) at varying scales. Tight letter-spacing on large sizes (−0.02em at 24px) for a compressed, professional feel. Never decorative — used only for page titles, card headings, and section labels.
+- **Body:** IBM Plex Sans Regular at 14–15px with 1.6 line-height for comfortable scanning of dense reasoning trail content.
+- **Labels:** IBM Plex Sans Medium at 11–12px, uppercase, with generous letter spacing (0.06–0.08em). Used for badge text, table column headers, and all status indicators only — never in prose.
+- **Monospace (IBM Plex Mono):** Used in two specific contexts only:
   1. **Source snippet blocks** — verbatim text extracted from research sources. The monospace treatment makes it immediately obvious that this is quoted, unedited source material, not AI-generated prose.
   2. **Email body text** — the generated draft body is shown in monospace to reinforce that it is an artifact to be reviewed and edited, not the final voice. This is intentional — it subtly signals "this is a draft" without requiring a label.
 
-Never mix font families in the same prose paragraph. The two-font distinction (Inter / JetBrains Mono) maps 1:1 to the semantic distinction: AI context vs. source evidence.
+Never mix font families in the same prose paragraph. The two-font distinction (IBM Plex Sans / IBM Plex Mono) maps 1:1 to the semantic distinction: AI context vs. source evidence.
 
 ## Layout
 
 The layout follows a **fixed sidebar + scrollable content area** model for all screens.
 
-- **Sidebar (240px, fixed left):** Brand Ink (#16171A). Contains wordmark, navigation, and user identity. At 1024px viewport, collapses to icon-only (48px wide).
-- **Top bar (56px, fixed top):** Paper (#FFFFFF) with a 1px bottom border. Page title only. No breadcrumbs, no secondary navigation.
-- **Content area:** Mist (#ECEEF3) background, scrollable, max-width 1280px centered with auto horizontal margins.
-- **Cards:** White surface, 1px border, 6px radius, 24px internal padding. The standard container for all content units. Cards never nest inside cards.
+- **Sidebar (240px, fixed left):** `sidebar-bg` (#0e1116 dark / #fcfcfd light) with a 1px right divider. Contains wordmark, navigation, and the theme toggle. At 1024px viewport, collapses to icon-only (48px wide).
+- **Top bar (56px, fixed top):** Card surface (#161a20 dark / #fcfcfd light) with a 1px bottom border. Page title only. No breadcrumbs, no secondary navigation.
+- **Content area:** Page background (#0c0e12 dark / #f1f2f4 light), scrollable, max-width 1280px centered with auto horizontal margins.
+- **Cards:** Card surface, 1px border, 8px radius, 24px internal padding. The standard container for all content units. Cards never nest inside cards.
 - **8px grid:** All spacing is a multiple of 8px. The 4px half-step (`xs`) is used only for micro-adjustments within compact components (e.g., icon-to-label gap, badge padding).
 - **Two-column layout on the Review screen:** 55% (draft) / 45% (reasoning trail). Both columns are equal in visual weight — no visual hierarchy between them. The reasoning trail column must not look like a footnote panel.
 - **Table row height: 40px.** Dense enough to show 15–20 rows without scrolling on a standard laptop.
@@ -778,9 +810,9 @@ The layout follows a **fixed sidebar + scrollable content area** model for all s
 
 Depth is achieved through **tonal layering**, not drop shadows. The three surface levels are:
 
-1. **Page background (#ECEEF3):** The base layer — never used for interactive elements.
-2. **Cards (#FFFFFF):** Primary content containers. Defined by a 1px `#ECEEF3` border, not a shadow. Flat, not floating.
-3. **Raised surface (#E4E7EF):** Used inside cards for nested elements — source snippet blocks, table header rows, expanded stage detail panels.
+1. **Page background (#0c0e12 dark / #f1f2f4 light):** The base layer — never used for interactive elements.
+2. **Cards (#161a20 dark / #fcfcfd light):** Primary content containers. Defined by a 1px border (`border` token), not a shadow. Flat, not floating.
+3. **Raised surface (#1c2129 dark / #e3e4e8 light):** Used inside cards for nested elements — source snippet blocks, table header rows, expanded stage detail panels.
 
 The one exception: dropdown menus and tooltips use a single subtle shadow (`0 4px 12px rgba(0,0,0,0.08)`) to float above the card layer. No other component uses shadows.
 
@@ -802,10 +834,10 @@ Never mix sharp (0px) corners with soft corners in the same view. Never use corn
 
 **Buttons.** Three core variants:
 
-- **Primary (blue):** Used for the single most important action on a screen — "Start Research," "Confirm & Approve." Maximum one per screen section.
+- **Primary (indigo):** Used for the single most important action on a screen — "Start Research," "Confirm & Approve." Maximum one per screen section.
 - **Success (green):** Approve action only. Never used elsewhere. Its uniqueness reinforces the gravity of the approval decision.
 - **Danger outline (red border, red text):** Reject action only. An outlined destructive button — less visually loud than a filled red, but clearly negative.
-- **Secondary (white, grey border):** Supporting actions — "Approve with Edits," "Cancel," "Retry." The default non-primary action style.
+- **Secondary (card surface, strong border):** Supporting actions — "Approve with Edits," "Cancel," "Retry." The default non-primary action style.
 - Button text always uses `headline-sm` (14px semibold). Never all-caps on buttons.
 - All buttons have a clear disabled state: 40% opacity, no cursor pointer, no hover effect.
 
@@ -816,17 +848,17 @@ Never mix sharp (0px) corners with soft corners in the same view. Never use corn
 - `NEEDS RESEARCH` — orange (use amber token, deeper saturation via opacity overlay)
 - `FAILED` — red
 - `REVIEWED` — neutral grey
-- `RUNNING` — blue with a subtle animated pulse on the dot indicator
+- `RUNNING` — indigo accent with a subtle animated pulse on the dot indicator
 
 **Score bars.** Horizontal progress bars (4px tall, full-radius) showing numeric scores. Color is data-driven: green above 0.7, amber 0.45–0.7, red below 0.45. Never show a score bar without its numeric value next to it.
 
-**Source snippet blocks.** A visually distinct component: cool-grey background (#E4E7EF), 1px border (#C8CCDA), monospace font, 12px/14px padding. Every source snippet must be preceded by a domain label + source link in regular body text. The block itself is not clickable — the link above it is.
+**Source snippet blocks.** A visually distinct component: raised `snippet-bg` surface (#1c2129 dark / #edeef1 light), 1px `snippet-border` (#2a313b dark / #c8ccd2 light), monospace font, 12px/14px padding. Every source snippet must be preceded by a domain label + source link in regular body text. The block itself is not clickable — the link above it is.
 
-**Stage step indicator.** Each pipeline stage renders as a row with: a circle status icon (16px) on the left, stage name in `body-md`, and elapsed time or one-line summary on the right. Active stage has a 2px left border in Accent blue (#2347E5). Completed stage has a green checkmark circle. Degraded stage has an amber warning triangle. The row height is 48px when collapsed, expanding to auto-height when expanded to show stage output detail.
+**Stage step indicator.** Each pipeline stage renders as a row with: a circle status icon (16px) on the left, stage name in `body-md`, and elapsed time or one-line summary on the right. Active stage has a 2px left border in the indigo accent (#7c83ff dark / #4b44d6 light). Completed stage has a green checkmark circle. Degraded stage has an amber warning triangle. The row height is 48px when collapsed, expanding to auto-height when expanded to show stage output detail.
 
 **Metric cards.** Five equal-width cards in a horizontal row. Each card: label in `label-md` uppercase, metric value in `display` (24px semibold), and a small context label in `body-sm` muted text. No chart, no trend arrow — just the number, clearly labeled.
 
-**Input fields.** Single border style: 1px solid `#ECEEF3`. On focus: border transitions to `#2347E5`. Label floats above the input. Error state: border turns red, error message appears below in `body-sm` danger color. No filled/background-colored inputs.
+**Input fields.** Single border style: 1px solid `border` token. On focus: border transitions to the indigo accent with a soft accent focus ring. Label floats above the input. Error state: border turns red, error message appears below in `body-sm` danger color. No filled/background-colored inputs.
 
 ## Do's and Don'ts
 
@@ -836,7 +868,7 @@ Never mix sharp (0px) corners with soft corners in the same view. Never use corn
 - **Do** use the green Approve button only for approval. Never repurpose its color for other positive actions.
 - **Do** design every state: loading, empty, error, degraded, and success. A blank white area or a raw error string is a design failure.
 - **Don't** use gradients, glow effects, drop shadows (except floating menus), or animated background elements anywhere.
-- **Don't** use more than one primary blue button in a single screen section.
+- **Don't** use more than one primary (indigo) button in a single screen section.
 - **Don't** use uppercase text outside of badge labels and table column headers. Prose and button text are always sentence-case.
 - **Don't** display a source snippet without its source URL and domain. A snippet without attribution is the exact failure mode the product is built to prevent.
 - **Don't** use red for anything other than destructive/error states. Score bars below threshold use red — that is the only other permitted use.
