@@ -16,9 +16,14 @@ def build_role_confirmation_prompt(individual_text: str, name: str, company_name
         "- tenure_days is the number of days since they started in their CURRENT role at this company, estimated "
         "from any dated text available (e.g. \"joined in March 2026\"). Use null if no dated start information "
         "exists.\n"
-        "- left_company is true only if a passage explicitly about this person states they no longer work at "
-        "the company (e.g. they personally moved to a different company, or the text explicitly discusses "
-        "their personal successor) — never infer this merely from another company name appearing nearby.\n"
+        "- left_company is true ONLY if a passage explicitly about this person shows they are no longer at "
+        "this company AT ALL — they personally joined a different company, or fully departed/retired. Never "
+        "infer this merely from another company name appearing nearby.\n"
+        "- A change of role WITHIN the same company is NOT leaving. If the person stepped down from one title "
+        "but took another role at the same company (e.g. CEO -> Vice Chairman / Executive Chairman / board "
+        "member / advisor), set left_company=false and put the new role in confirmed_title.\n"
+        "- A named successor for a role the person vacated only shows they left THAT ROLE, not the company. "
+        "Never set left_company from a successor alone.\n"
         'Return ONLY a JSON object: {"confirmed_title": str | null, "tenure_days": int | null, '
         '"left_company": bool, "title_confirmed": bool, "reason": str}.'
     )
